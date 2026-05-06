@@ -1387,6 +1387,32 @@ $("exportBtn").addEventListener("click", () => {
 });
 
 
+// ---- overflow menu (mobile) ---------------------------------------------
+
+$("overflowBtn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  $("overflowMenu").classList.toggle("hidden");
+});
+
+$("overflowSettings").addEventListener("click", () => {
+  $("overflowMenu").classList.add("hidden");
+  openSettings();
+});
+
+$("overflowInsights").addEventListener("click", () => {
+  $("overflowMenu").classList.add("hidden");
+  openInsights();
+});
+
+document.addEventListener("click", (e) => {
+  if (!$("overflowMenu").classList.contains("hidden") &&
+      !$("overflowMenu").contains(e.target) &&
+      e.target !== $("overflowBtn")) {
+    $("overflowMenu").classList.add("hidden");
+  }
+});
+
+
 // ---- init ---------------------------------------------------------------
 
 // Migrate history from old brand key
