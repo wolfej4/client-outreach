@@ -1,0 +1,39 @@
+services:
+  msp-discovery:
+    build: .
+    image: msp-discovery:latest
+    container_name: msp-discovery
+    restart: unless-stopped
+
+    ports:
+      - "8742:8000"
+
+    environment:
+      # --- Ollama ---
+      # If Ollama runs on the host, host.docker.internal works on Linux because
+      # of the extra_hosts entry below. If Ollama runs in another container,
+      # point at its container name (e.g. http://ollama:11434) and join the
+      # same Docker network instead.
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1:8b}
+      OLLAMA_TIMEOUT: ${OLLAMA_TIMEOUT:-180}
+
+      # --- Sender info (used in email signatures and the brand mark) ---
+      SENDER_NAME: ${SENDER_NAME:-Jacob}
+      SENDER_TITLE: ${SENDER_TITLE:-Owner}
+      SENDER_EMAIL: ${SENDER_EMAIL:-}
+      SENDER_PHONE: ${SENDER_PHONE:-}
+      SENDER_LOCATION: ${SENDER_LOCATION:-Crestview, FL}
+      MSP_NAME: ${MSP_NAME:-Wolfden}
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    # If you want to run Ollama in a sibling container, uncomment networks
+    # below and create a network named `homelab` (or whatever you use).
+    # networks:
+    #   - homelab
+
+# networks:
+#   homelab:
+#     external: true

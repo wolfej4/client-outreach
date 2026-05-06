@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="Discovery"/>
+<meta name="theme-color" content="#FAF9F6" media="(prefers-color-scheme: light)"/>
+<meta name="theme-color" content="#15140F" media="(prefers-color-scheme: dark)"/>
+<title>Discovery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" id="brandMark">Wolfden</span>
+    <span class="brand-sub">discovery</span>
+  </div>
+  <div class="top-actions">
+    <button id="historyBtn" class="ghost">Recent</button>
+    <button id="newBtn" class="ghost">New</button>
+  </div>
+</header>
+
+<main class="page">
+
+  <section class="card head-card">
+    <div class="head-row">
+      <input id="company" class="company-input" type="text" placeholder="Company name" autocomplete="off" autocapitalize="words"/>
+      <span id="meta" class="meta"></span>
+    </div>
+    <div class="two-col" style="margin-top: 14px;">
+      <input id="contact" type="text" placeholder="Contact name" autocomplete="off" autocapitalize="words"/>
+      <input id="role" type="text" placeholder="Role" autocomplete="off"/>
+    </div>
+    <div class="two-col" style="margin-top: 8px;">
+      <input id="contact_email" type="email" placeholder="Email" autocomplete="off" autocapitalize="off"/>
+      <input id="contact_phone" type="tel" placeholder="Phone" autocomplete="off"/>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 class="section-title">Business profile</h2>
+
+    <p class="field-label">Industry</p>
+    <div class="chips" data-field="industry">
+      <button class="chip" data-value="Healthcare">Healthcare</button>
+      <button class="chip" data-value="Legal">Legal</button>
+      <button class="chip" data-value="Professional services">Pro services</button>
+      <button class="chip" data-value="Construction">Construction</button>
+      <button class="chip" data-value="Retail">Retail</button>
+      <button class="chip" data-value="Manufacturing">Manufacturing</button>
+      <button class="chip" data-value="Hospitality">Hospitality</button>
+      <button class="chip" data-value="Nonprofit">Nonprofit</button>
+      <button class="chip" data-value="Other">Other</button>
+    </div>
+
+    <p class="field-label">Headcount</p>
+    <div class="chips" data-field="headcount">
+      <button class="chip" data-value="1–10">1–10</button>
+      <button class="chip" data-value="11–25">11–25</button>
+      <button class="chip" data-value="26–50">26–50</button>
+      <button class="chip" data-value="51–100">51–100</button>
+      <button class="chip" data-value="100+">100+</button>
+    </div>
+
+    <p class="field-label">Locations</p>
+    <div class="stepper">
+      <button class="step" data-step="-1" aria-label="Decrease">−</button>
+      <span id="locations" class="stepper-value">1</span>
+      <button class="step" data-step="1" aria-label="Increase">+</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 class="section-title">Current IT</h2>
+
+    <p class="field-label">Who handles it</p>
+    <div class="chips" data-field="current_it">
+      <button class="chip" data-value="No one">No one</button>
+      <button class="chip" data-value="Internal hire">Internal hire</button>
+      <button class="chip" data-value="Break-fix vendor">Break-fix vendor</button>
+      <button class="chip" data-value="Another MSP">Another MSP</button>
+    </div>
+
+    <p class="field-label">Pain points</p>
+    <textarea id="pain_points" rows="4" placeholder="What's broken, slow, scary, or expensive…"></textarea>
+
+    <p class="field-label">Tech stack notes</p>
+    <textarea id="tech_stack" rows="3" placeholder="M365 / Google, key apps, ~endpoint count, server/cloud mix…"></textarea>
+  </section>
+
+  <section class="card">
+    <h2 class="section-title">Priorities &amp; decision</h2>
+
+    <p class="field-label">Timeline</p>
+    <div class="chips" data-field="timeline">
+      <button class="chip" data-value="ASAP">ASAP</button>
+      <button class="chip" data-value="30 days">30 days</button>
+      <button class="chip" data-value="60–90 days">60–90 days</button>
+      <button class="chip" data-value="Exploring">Exploring</button>
+    </div>
+
+    <p class="field-label">Top priority</p>
+    <textarea id="top_priority" rows="2" placeholder="What does success look like for them in 12 months…"></textarea>
+
+    <p class="field-label">Decision-makers</p>
+    <input id="decision_makers" type="text" placeholder="Who else needs to weigh in" autocomplete="off"/>
+
+    <p class="field-label">Budget signal</p>
+    <input id="budget" type="text" placeholder="Current monthly IT spend, comfort range, etc." autocomplete="off"/>
+  </section>
+
+  <section class="card">
+    <h2 class="section-title">Other notes</h2>
+    <textarea id="extra_notes" rows="4" placeholder="Anything else worth remembering for the follow-up…"></textarea>
+  </section>
+
+  <div class="action-bar">
+    <button id="saveBtn" class="btn-secondary">Save</button>
+    <button id="draftBtn" class="btn-primary">Draft follow-up email</button>
+  </div>
+
+  <p class="footnote" id="modelFootnote"></p>
+
+</main>
+
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 id="modalTitle" class="modal-title">Follow-up email</h2>
+      <button id="modalClose" class="ghost icon" aria-label="Close">✕</button>
+    </div>
+    <div id="draftStatus" class="draft-status">Drafting…</div>
+    <textarea id="draftText" class="draft-text" rows="14" spellcheck="true" placeholder="The draft will appear here…"></textarea>
+    <div class="modal-actions">
+      <button id="copyBtn" class="btn-secondary">Copy</button>
+      <button id="mailBtn" class="btn-secondary">Open in mail</button>
+      <button id="regenBtn" class="btn-secondary">Regenerate</button>
+    </div>
+  </div>
+</div>
+
+<div id="historyModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 id="historyTitle" class="modal-title">Recent meetings</h2>
+      <button id="historyClose" class="ghost icon" aria-label="Close">✕</button>
+    </div>
+    <div id="historyList" class="history-list"></div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
