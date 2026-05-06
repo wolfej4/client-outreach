@@ -27,6 +27,7 @@
   </div>
   <div class="top-actions">
     <button id="settingsBtn" class="ghost">Settings</button>
+    <button id="insightsBtn" class="ghost">Insights</button>
     <button id="historyBtn" class="ghost">Recent</button>
     <button id="newBtn" class="ghost">New</button>
   </div>
@@ -97,9 +98,26 @@
 
     <p class="field-label">Pain points</p>
     <textarea id="pain_points" rows="4" placeholder="What's broken, slow, scary, or expensive…"></textarea>
+    <div id="painSuggestions" class="pain-suggestions"></div>
 
     <p class="field-label">Tech stack notes</p>
     <textarea id="tech_stack" rows="3" placeholder="M365 / Google, key apps, ~endpoint count, server/cloud mix…"></textarea>
+  </section>
+
+  <section class="card">
+    <h2 class="section-title">Conversation signals</h2>
+
+    <p class="field-label">Quick taps</p>
+    <div class="signal-taps" id="quickTaps"></div>
+
+    <p class="field-label">Objections raised</p>
+    <div class="signal-taps" id="objectionTaps"></div>
+
+    <div class="signal-custom-row">
+      <input id="signalCustom" type="text" placeholder="Quick note… (press Enter)" autocomplete="off"/>
+    </div>
+
+    <div id="signalLog" class="signal-log"></div>
   </section>
 
   <section class="card">
@@ -131,7 +149,8 @@
   <div class="action-bar">
     <button id="saveBtn" class="btn-secondary">Save</button>
     <button id="exportBtn" class="btn-secondary">Export PDF</button>
-    <button id="draftBtn" class="btn-primary">Draft follow-up email</button>
+    <button id="proposalBtn" class="btn-secondary">Proposal</button>
+    <button id="draftBtn" class="btn-primary">Draft email</button>
   </div>
 
   <p class="footnote" id="modelFootnote"></p>
@@ -161,6 +180,44 @@
       <button id="historyClose" class="ghost icon" aria-label="Close">✕</button>
     </div>
     <div id="historyList" class="history-list"></div>
+  </div>
+</div>
+
+<div id="proposalModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="proposalTitle">
+  <div class="modal-card modal-card--wide">
+    <div class="modal-head">
+      <h2 id="proposalTitle" class="modal-title">Proposal builder</h2>
+      <button id="proposalClose" class="ghost icon" aria-label="Close">✕</button>
+    </div>
+    <div class="proposal-body">
+      <div class="proposal-controls">
+        <div class="proposal-users-row">
+          <span class="field-label" style="margin:0">Users</span>
+          <input id="proposalUsers" type="number" class="proposal-users-input" min="1" max="9999" value="10"/>
+        </div>
+        <div id="proposalServices" class="proposal-services"></div>
+        <div class="proposal-total-row">
+          <span class="proposal-total-label">Monthly estimate</span>
+          <span id="proposalTotal" class="proposal-total-amt">—</span>
+        </div>
+      </div>
+      <textarea id="proposalText" class="proposal-text" rows="14" spellcheck="true"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button id="proposalCopy" class="btn-secondary">Copy</button>
+      <button id="proposalRegen" class="btn-secondary">Regenerate</button>
+      <button id="proposalPDF" class="btn-secondary">Export PDF</button>
+    </div>
+  </div>
+</div>
+
+<div id="insightsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="insightsTitle">
+  <div class="modal-card modal-card--wide">
+    <div class="modal-head">
+      <h2 id="insightsTitle" class="modal-title">Conversation insights</h2>
+      <button id="insightsClose" class="ghost icon" aria-label="Close">✕</button>
+    </div>
+    <div id="insightsBody" class="insights-body"></div>
   </div>
 </div>
 
