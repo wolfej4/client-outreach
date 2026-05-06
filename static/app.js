@@ -97,6 +97,7 @@ function setNotes(n) {
     otherBox.value = "";
     otherBox.style.display = "none";
   }
+  updateScore();
 }
 
 function clearForm() {
@@ -110,6 +111,7 @@ function clearForm() {
   $("industry_other").value = "";
   $("industry_other").style.display = "none";
   state.meeting_id = null;
+  updateScore();
   state.meta = fmtMeta();
   $("meta").textContent = state.meta;
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -138,6 +140,7 @@ $$(".chips").forEach((group) => {
       if (show) box.focus();
       else box.value = "";
     }
+    updateScore();
   });
 });
 
@@ -374,6 +377,51 @@ $("mailBtn").addEventListener("click", () => {
 $("regenBtn").addEventListener("click", draftEmail);
 
 
+// ---- lead score ---------------------------------------------------------
+
+const SCORE_TIMELINE  = { "ASAP": 3, "30 days": 2, "60–90 days": 1, "Exploring": 0 };
+const SCORE_CURRENT_IT = { "No one": 2, "Break-fix vendor": 2, "Another MSP": 1, "Internal hire": 1 };
+const SCORE_HEADCOUNT  = { "1–10": 0, "11–25": 1, "26–50": 1, "51–100": 2, "100+": 2 };
+
+function calcScore() {
+  let s = 0;
+  s += SCORE_TIMELINE[state.timeline]    ?? 0;
+  s += SCORE_CURRENT_IT[state.current_it] ?? 0;
+  s += SCORE_HEADCOUNT[state.headcount]   ?? 0;
+  if ($("pain_points").value.trim())  s += 1;
+  if ($("budget").value.trim())       s += 1;
+  if ($("top_priority").value.trim()) s += 1;
+  return s;
+}
+
+function updateScore() {
+  const el = $("leadScore");
+  const hasAny = state.timeline || state.current_it || state.headcount ||
+                 $("pain_points").value.trim() || $("budget").value.trim() ||
+                 $("top_priority").value.trim();
+  if (!hasAny) {
+    el.textContent = "–";
+    el.className = "lead-score lead-score--empty";
+    el.title = "Lead score — fill in the form to see a score";
+    return;
+  }
+  const score = calcScore();
+  el.textContent = score;
+  el.className = "lead-score " + (score >= 7 ? "lead-score--high" : score >= 4 ? "lead-score--mid" : "lead-score--low");
+  el.title = [
+    `Lead score: ${score}/10`,
+    `Timeline:   ${SCORE_TIMELINE[state.timeline]    ?? 0}/3`,
+    `Current IT: ${SCORE_CURRENT_IT[state.current_it] ?? 0}/2`,
+    `Headcount:  ${SCORE_HEADCOUNT[state.headcount]   ?? 0}/2`,
+    `Engagement: ${($("pain_points").value.trim()?1:0) + ($("budget").value.trim()?1:0) + ($("top_priority").value.trim()?1:0)}/3`,
+  ].join("\n");
+}
+
+["pain_points", "budget", "top_priority"].forEach((id) =>
+  $(id).addEventListener("input", updateScore)
+);
+
+
 // ---- logo ---------------------------------------------------------------
 
 function setLogo(dataUrl) {
@@ -453,16 +501,184 @@ $("settingsClose").addEventListener("click", () => closeModal("settingsModal"));
 
 // ---- PDF export ---------------------------------------------------------
 
+function buildPrintDoc(notes, score) {
+  const s = loadSettings();
+  const logo = localStorage.getItem(LOGO_KEY);
+  const mspName = s.msp_name || document.title.replace(" discovery", "") || "SwyfTech";
+
+  function row(label, value) {
+    if (!value) return "";
+    return `<tr><td class="label">${escapeHtml(label)}</td><td>${escapeHtml(String(value))}</td></tr>`;
+  }
+
+  function section(title, rows) {
+    const content = rows.filter(Boolean).join("");
+    if (!content) return "";
+    return `
+      <div class="section">
+        <h2>${escapeHtml(title)}</h2>
+        <table>${content}</table>
+      </div>`;
+  }
+
+  const scoreClass = score === null ? "score-empty" : score >= 7 ? "score-high" : score >= 4 ? "score-mid" : "score-low";
+  const scoreLabel = score === null ? "–" : `${score}/10`;
+
+  const locStr = notes.locations > 1 ? `${notes.locations} locations` : "1 location";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>${escapeHtml(notes.company || "Discovery notes")} — ${escapeHtml(mspName)}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 12pt;
+    color: #111;
+    background: #fff;
+    padding: 0;
+  }
+  .page { max-width: 720px; margin: 0 auto; padding: 48px 48px 64px; }
+
+  /* header */
+  .doc-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    padding-bottom: 18px;
+    border-bottom: 2px solid #111;
+    gap: 16px;
+  }
+  .doc-header-left { display: flex; align-items: center; gap: 14px; }
+  .doc-logo { max-height: 44px; max-width: 140px; object-fit: contain; }
+  .doc-msp { font-size: 11pt; font-weight: 600; color: #444; }
+  .doc-date { font-size: 10pt; color: #666; margin-top: 3px; }
+  .score-badge {
+    font-size: 11pt;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .score-empty { background: #eee; color: #888; }
+  .score-low   { background: #fee2e2; color: #991b1b; }
+  .score-mid   { background: #fef3c7; color: #92400e; }
+  .score-high  { background: #dcfce7; color: #166534; }
+
+  /* company block */
+  .company-block { margin-bottom: 24px; }
+  .company-name { font-size: 22pt; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .company-meta { font-size: 10pt; color: #555; margin-top: 6px; }
+  .company-meta span + span::before { content: " · "; }
+
+  /* sections */
+  .section { margin-bottom: 20px; break-inside: avoid; }
+  h2 {
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #777;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #e5e5e5;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 5px 0; vertical-align: top; font-size: 11pt; line-height: 1.45; }
+  td.label {
+    width: 32%;
+    font-size: 10pt;
+    color: #666;
+    padding-right: 12px;
+    padding-top: 6px;
+  }
+  td:not(.label) { white-space: pre-wrap; }
+
+  /* footer */
+  .doc-footer {
+    margin-top: 40px;
+    padding-top: 14px;
+    border-top: 1px solid #ddd;
+    font-size: 9pt;
+    color: #aaa;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  @media print {
+    body { padding: 0; }
+    .page { padding: 24px 32px 32px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="doc-header">
+    <div class="doc-header-left">
+      ${logo ? `<img class="doc-logo" src="${logo}" alt="Logo"/>` : ""}
+      <div>
+        <div class="doc-msp">${escapeHtml(mspName)}</div>
+        <div class="doc-date">${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</div>
+      </div>
+    </div>
+    <div class="score-badge ${scoreClass}">Lead score ${scoreLabel}</div>
+  </div>
+
+  <div class="company-block">
+    <div class="company-name">${escapeHtml(notes.company || "Unnamed company")}</div>
+    <div class="company-meta">
+      ${notes.contact    ? `<span>${escapeHtml(notes.contact)}${notes.role ? `, ${notes.role}` : ""}</span>` : ""}
+      ${notes.contact_email ? `<span>${escapeHtml(notes.contact_email)}</span>` : ""}
+      ${notes.contact_phone ? `<span>${escapeHtml(notes.contact_phone)}</span>` : ""}
+    </div>
+  </div>
+
+  ${section("Business profile", [
+    row("Industry",  notes.industry),
+    row("Headcount", notes.headcount),
+    row("Locations", locStr),
+  ])}
+
+  ${section("Current IT", [
+    row("Who handles it", notes.current_it),
+    row("Pain points",    notes.pain_points),
+    row("Tech stack",     notes.tech_stack),
+  ])}
+
+  ${section("Priorities & decision", [
+    row("Timeline",        notes.timeline),
+    row("Top priority",    notes.top_priority),
+    row("Decision-makers", notes.decision_makers),
+    row("Budget signal",   notes.budget),
+  ])}
+
+  ${notes.extra_notes ? section("Other notes", [row("Notes", notes.extra_notes)]) : ""}
+
+  <div class="doc-footer">
+    <span>${escapeHtml(mspName)} — Discovery notes</span>
+    <span>Confidential</span>
+  </div>
+</div>
+<script>window.onload = () => { window.print(); };<\/script>
+</body>
+</html>`;
+}
+
 $("exportBtn").addEventListener("click", () => {
   const notes = getNotes();
-  document.title = notes.company
-    ? `${notes.company} — SwyfTech discovery`
-    : "SwyfTech discovery";
-  window.print();
-  setTimeout(() => {
-    const s = loadSettings();
-    document.title = `${s.msp_name || "SwyfTech"} discovery`;
-  }, 1000);
+  const score = (state.timeline || state.current_it || state.headcount ||
+                 notes.pain_points || notes.budget || notes.top_priority)
+    ? calcScore() : null;
+  const win = window.open("", "_blank");
+  if (!win) { toast("Allow pop-ups to export PDF"); return; }
+  win.document.write(buildPrintDoc(notes, score));
+  win.document.close();
 });
 
 
