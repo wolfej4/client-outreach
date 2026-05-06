@@ -793,13 +793,13 @@ textarea {
   color: var(--hint);
   cursor: pointer;
   font-size: 13px;
-  padding: 0 2px;
+  padding: 0 4px;
   line-height: 1;
-  opacity: 0;
-  transition: opacity 0.1s;
+  opacity: 0.45;
+  transition: opacity 0.1s, color 0.1s;
 }
 
-.signal-entry:hover .signal-del { opacity: 1; }
+.signal-del:hover { opacity: 1; color: var(--danger); }
 
 /* ---- insights modal ---- */
 
