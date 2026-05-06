@@ -90,6 +90,13 @@ def build_user_prompt(notes: dict, sender: dict) -> str:
         if ln:
             lines.append(ln)
 
+    signals = notes.get("signals") or []
+    if signals:
+        lines.append("")
+        lines.append("Signals logged during the meeting:")
+        for sig in signals:
+            lines.append(f"  [{sig.get('category', 'note')}] {sig.get('label', '')}")
+
     lines.append("")
     lines.append("Sign the email as:")
     if sender.get("name"):

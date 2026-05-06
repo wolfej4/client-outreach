@@ -24,6 +24,7 @@ const state = {
   meeting_id: null,
   meta: "",
   config: { sender_location: "", sender_name: "", model: "" },
+  signals: [],
 };
 
 const $ = (id) => document.getElementById(id);
@@ -72,6 +73,7 @@ function getNotes() {
   n.meta = state.meta;
   n.industry_other = $("industry_other").value.trim();
   if (n.industry === "Other" && n.industry_other) n.industry = n.industry_other;
+  n.signals = state.signals.slice();
   return n;
 }
 
@@ -97,6 +99,8 @@ function setNotes(n) {
     otherBox.value = "";
     otherBox.style.display = "none";
   }
+  state.signals = Array.isArray(n.signals) ? n.signals : [];
+  renderSignalLog();
   updateScore();
 }
 
@@ -111,6 +115,8 @@ function clearForm() {
   $("industry_other").value = "";
   $("industry_other").style.display = "none";
   state.meeting_id = null;
+  state.signals = [];
+  renderSignalLog();
   updateScore();
   state.meta = fmtMeta();
   $("meta").textContent = state.meta;
@@ -375,6 +381,181 @@ $("mailBtn").addEventListener("click", () => {
 });
 
 $("regenBtn").addEventListener("click", draftEmail);
+
+
+// ---- conversation signals -----------------------------------------------
+
+const QUICK_TAPS = [
+  { label: "Cybersecurity concern",    category: "concern"   },
+  { label: "Data loss worry",          category: "concern"   },
+  { label: "Downtime complaints",      category: "concern"   },
+  { label: "Compliance pressure",      category: "concern"   },
+  { label: "Asked about pricing",      category: "interest"  },
+  { label: "Mentioned growth plans",   category: "interest"  },
+  { label: "Expressed urgency",        category: "interest"  },
+  { label: "Asked for next steps",     category: "interest"  },
+  { label: "Complained about current provider", category: "interest" },
+];
+
+const OBJECTIONS = [
+  "Too expensive",
+  "Locked in contract",
+  "Happy with current IT",
+  "Not the right time",
+  "Need to involve others",
+  "DIY / internal hire",
+];
+
+function addSignal(label, category) {
+  state.signals.push({ ts: Date.now(), label, category });
+  renderSignalLog();
+}
+
+function removeSignal(idx) {
+  state.signals.splice(idx, 1);
+  renderSignalLog();
+}
+
+function renderSignalLog() {
+  const log = $("signalLog");
+  if (state.signals.length === 0) {
+    log.innerHTML = "";
+    return;
+  }
+  log.innerHTML = [...state.signals].reverse().map((sig, ri) => {
+    const i = state.signals.length - 1 - ri;
+    const t = new Date(sig.ts).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    return `<div class="signal-entry signal-entry--${sig.category}">
+      <span class="signal-dot"></span>
+      <span class="signal-label">${escapeHtml(sig.label)}</span>
+      <span class="signal-time">${t}</span>
+      <button class="signal-del" data-idx="${i}" aria-label="Remove">✕</button>
+    </div>`;
+  }).join("");
+  log.querySelectorAll(".signal-del").forEach((btn) => {
+    btn.addEventListener("click", () => removeSignal(Number(btn.dataset.idx)));
+  });
+}
+
+// Build tap buttons
+(function buildTapButtons() {
+  const quickEl = $("quickTaps");
+  QUICK_TAPS.forEach(({ label, category }) => {
+    const btn = document.createElement("button");
+    btn.className = `signal-tap signal-tap--${category}`;
+    btn.textContent = label;
+    btn.addEventListener("click", () => {
+      addSignal(label, category);
+      btn.style.transform = "scale(0.93)";
+      setTimeout(() => (btn.style.transform = ""), 120);
+    });
+    quickEl.appendChild(btn);
+  });
+
+  const objEl = $("objectionTaps");
+  OBJECTIONS.forEach((label) => {
+    const btn = document.createElement("button");
+    btn.className = "signal-tap signal-tap--objection";
+    btn.textContent = label;
+    btn.addEventListener("click", () => {
+      addSignal(label, "objection");
+      btn.style.transform = "scale(0.93)";
+      setTimeout(() => (btn.style.transform = ""), 120);
+    });
+    objEl.appendChild(btn);
+  });
+})();
+
+// Custom note input
+$("signalCustom").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const val = $("signalCustom").value.trim();
+  if (!val) return;
+  addSignal(val, "custom");
+  $("signalCustom").value = "";
+});
+
+
+// ---- insights -----------------------------------------------------------
+
+function openInsights() {
+  const history = loadHistory();
+  const body = $("insightsBody");
+
+  if (history.length === 0) {
+    body.innerHTML = '<div class="insights-empty">No saved meetings yet — save a few meetings to see trends.</div>';
+    $("insightsModal").classList.remove("hidden");
+    return;
+  }
+
+  // Aggregate signals across all saved meetings
+  const counts = {};
+  let meetingsWithSignals = 0;
+
+  history.forEach((h) => {
+    const sigs = Array.isArray(h.notes.signals) ? h.notes.signals : [];
+    if (sigs.length) meetingsWithSignals++;
+    sigs.forEach((sig) => {
+      const key = sig.label;
+      if (!counts[key]) counts[key] = { count: 0, category: sig.category };
+      counts[key].count++;
+    });
+  });
+
+  const groups = {
+    objection: { title: "Objections raised",  items: [] },
+    concern:   { title: "Concerns mentioned", items: [] },
+    interest:  { title: "Engagement signals", items: [] },
+    custom:    { title: "Custom notes",        items: [] },
+  };
+
+  Object.entries(counts)
+    .sort((a, b) => b[1].count - a[1].count)
+    .forEach(([label, { count, category }]) => {
+      const cat = groups[category] ? category : "custom";
+      groups[cat].items.push({ label, count });
+    });
+
+  const maxCount = Math.max(1, ...Object.values(counts).map((v) => v.count));
+
+  function renderGroup(cat) {
+    const g = groups[cat];
+    if (!g.items.length) return "";
+    const rows = g.items.map(({ label, count }) => {
+      const pct = Math.round((count / maxCount) * 100);
+      return `<div class="insights-row">
+        <span class="insights-row-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
+        <div class="insights-bar-track">
+          <div class="insights-bar-fill insights-bar-fill--${cat}" style="width:${pct}%"></div>
+        </div>
+        <span class="insights-row-count">${count}×</span>
+      </div>`;
+    }).join("");
+    return `<div>
+      <div class="insights-group-title insights-group-title--${cat}">${escapeHtml(g.title)}</div>
+      ${rows}
+    </div>`;
+  }
+
+  const hasAny = Object.values(groups).some((g) => g.items.length);
+
+  body.innerHTML = `
+    <p class="insights-meta">${meetingsWithSignals} of ${history.length} saved meeting${history.length !== 1 ? "s" : ""} have signals</p>
+    ${hasAny
+      ? `<div class="insights-groups">
+          ${renderGroup("objection")}
+          ${renderGroup("concern")}
+          ${renderGroup("interest")}
+          ${renderGroup("custom")}
+        </div>`
+      : '<div class="insights-empty">No signals logged yet — tap the buttons during meetings.</div>'
+    }`;
+
+  $("insightsModal").classList.remove("hidden");
+}
+
+$("insightsBtn").addEventListener("click", openInsights);
+$("insightsClose").addEventListener("click", () => closeModal("insightsModal"));
 
 
 // ---- lead score ---------------------------------------------------------
@@ -659,6 +840,19 @@ function buildPrintDoc(notes, score) {
   ])}
 
   ${notes.extra_notes ? section("Other notes", [row("Notes", notes.extra_notes)]) : ""}
+
+  ${Array.isArray(notes.signals) && notes.signals.length ? `
+  <div class="section">
+    <h2>Conversation signals</h2>
+    <table>${notes.signals.map((sig) => `
+      <tr>
+        <td class="label" style="color:${sig.category==="objection"?"#991B1B":sig.category==="concern"?"#92400E":sig.category==="interest"?"#166534":"#777"}">
+          ${escapeHtml(sig.category)}
+        </td>
+        <td>${escapeHtml(sig.label)}<span style="color:#aaa;font-size:10pt;margin-left:10px">${new Date(sig.ts).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})}</span></td>
+      </tr>`).join("")}
+    </table>
+  </div>` : ""}
 
   <div class="doc-footer">
     <span>${escapeHtml(mspName)} — Discovery notes</span>

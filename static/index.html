@@ -27,6 +27,7 @@
   </div>
   <div class="top-actions">
     <button id="settingsBtn" class="ghost">Settings</button>
+    <button id="insightsBtn" class="ghost">Insights</button>
     <button id="historyBtn" class="ghost">Recent</button>
     <button id="newBtn" class="ghost">New</button>
   </div>
@@ -103,6 +104,22 @@
   </section>
 
   <section class="card">
+    <h2 class="section-title">Conversation signals</h2>
+
+    <p class="field-label">Quick taps</p>
+    <div class="signal-taps" id="quickTaps"></div>
+
+    <p class="field-label">Objections raised</p>
+    <div class="signal-taps" id="objectionTaps"></div>
+
+    <div class="signal-custom-row">
+      <input id="signalCustom" type="text" placeholder="Quick note… (press Enter)" autocomplete="off"/>
+    </div>
+
+    <div id="signalLog" class="signal-log"></div>
+  </section>
+
+  <section class="card">
     <h2 class="section-title">Priorities &amp; decision</h2>
 
     <p class="field-label">Timeline</p>
@@ -161,6 +178,16 @@
       <button id="historyClose" class="ghost icon" aria-label="Close">✕</button>
     </div>
     <div id="historyList" class="history-list"></div>
+  </div>
+</div>
+
+<div id="insightsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="insightsTitle">
+  <div class="modal-card modal-card--wide">
+    <div class="modal-head">
+      <h2 id="insightsTitle" class="modal-title">Conversation insights</h2>
+      <button id="insightsClose" class="ghost icon" aria-label="Close">✕</button>
+    </div>
+    <div id="insightsBody" class="insights-body"></div>
   </div>
 </div>
 
