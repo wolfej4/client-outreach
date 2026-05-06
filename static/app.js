@@ -501,16 +501,184 @@ $("settingsClose").addEventListener("click", () => closeModal("settingsModal"));
 
 // ---- PDF export ---------------------------------------------------------
 
+function buildPrintDoc(notes, score) {
+  const s = loadSettings();
+  const logo = localStorage.getItem(LOGO_KEY);
+  const mspName = s.msp_name || document.title.replace(" discovery", "") || "SwyfTech";
+
+  function row(label, value) {
+    if (!value) return "";
+    return `<tr><td class="label">${escapeHtml(label)}</td><td>${escapeHtml(String(value))}</td></tr>`;
+  }
+
+  function section(title, rows) {
+    const content = rows.filter(Boolean).join("");
+    if (!content) return "";
+    return `
+      <div class="section">
+        <h2>${escapeHtml(title)}</h2>
+        <table>${content}</table>
+      </div>`;
+  }
+
+  const scoreClass = score === null ? "score-empty" : score >= 7 ? "score-high" : score >= 4 ? "score-mid" : "score-low";
+  const scoreLabel = score === null ? "–" : `${score}/10`;
+
+  const locStr = notes.locations > 1 ? `${notes.locations} locations` : "1 location";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>${escapeHtml(notes.company || "Discovery notes")} — ${escapeHtml(mspName)}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 12pt;
+    color: #111;
+    background: #fff;
+    padding: 0;
+  }
+  .page { max-width: 720px; margin: 0 auto; padding: 48px 48px 64px; }
+
+  /* header */
+  .doc-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    padding-bottom: 18px;
+    border-bottom: 2px solid #111;
+    gap: 16px;
+  }
+  .doc-header-left { display: flex; align-items: center; gap: 14px; }
+  .doc-logo { max-height: 44px; max-width: 140px; object-fit: contain; }
+  .doc-msp { font-size: 11pt; font-weight: 600; color: #444; }
+  .doc-date { font-size: 10pt; color: #666; margin-top: 3px; }
+  .score-badge {
+    font-size: 11pt;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .score-empty { background: #eee; color: #888; }
+  .score-low   { background: #fee2e2; color: #991b1b; }
+  .score-mid   { background: #fef3c7; color: #92400e; }
+  .score-high  { background: #dcfce7; color: #166534; }
+
+  /* company block */
+  .company-block { margin-bottom: 24px; }
+  .company-name { font-size: 22pt; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .company-meta { font-size: 10pt; color: #555; margin-top: 6px; }
+  .company-meta span + span::before { content: " · "; }
+
+  /* sections */
+  .section { margin-bottom: 20px; break-inside: avoid; }
+  h2 {
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #777;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #e5e5e5;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 5px 0; vertical-align: top; font-size: 11pt; line-height: 1.45; }
+  td.label {
+    width: 32%;
+    font-size: 10pt;
+    color: #666;
+    padding-right: 12px;
+    padding-top: 6px;
+  }
+  td:not(.label) { white-space: pre-wrap; }
+
+  /* footer */
+  .doc-footer {
+    margin-top: 40px;
+    padding-top: 14px;
+    border-top: 1px solid #ddd;
+    font-size: 9pt;
+    color: #aaa;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  @media print {
+    body { padding: 0; }
+    .page { padding: 24px 32px 32px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="doc-header">
+    <div class="doc-header-left">
+      ${logo ? `<img class="doc-logo" src="${logo}" alt="Logo"/>` : ""}
+      <div>
+        <div class="doc-msp">${escapeHtml(mspName)}</div>
+        <div class="doc-date">${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</div>
+      </div>
+    </div>
+    <div class="score-badge ${scoreClass}">Lead score ${scoreLabel}</div>
+  </div>
+
+  <div class="company-block">
+    <div class="company-name">${escapeHtml(notes.company || "Unnamed company")}</div>
+    <div class="company-meta">
+      ${notes.contact    ? `<span>${escapeHtml(notes.contact)}${notes.role ? `, ${notes.role}` : ""}</span>` : ""}
+      ${notes.contact_email ? `<span>${escapeHtml(notes.contact_email)}</span>` : ""}
+      ${notes.contact_phone ? `<span>${escapeHtml(notes.contact_phone)}</span>` : ""}
+    </div>
+  </div>
+
+  ${section("Business profile", [
+    row("Industry",  notes.industry),
+    row("Headcount", notes.headcount),
+    row("Locations", locStr),
+  ])}
+
+  ${section("Current IT", [
+    row("Who handles it", notes.current_it),
+    row("Pain points",    notes.pain_points),
+    row("Tech stack",     notes.tech_stack),
+  ])}
+
+  ${section("Priorities & decision", [
+    row("Timeline",        notes.timeline),
+    row("Top priority",    notes.top_priority),
+    row("Decision-makers", notes.decision_makers),
+    row("Budget signal",   notes.budget),
+  ])}
+
+  ${notes.extra_notes ? section("Other notes", [row("Notes", notes.extra_notes)]) : ""}
+
+  <div class="doc-footer">
+    <span>${escapeHtml(mspName)} — Discovery notes</span>
+    <span>Confidential</span>
+  </div>
+</div>
+<script>window.onload = () => { window.print(); };<\/script>
+</body>
+</html>`;
+}
+
 $("exportBtn").addEventListener("click", () => {
   const notes = getNotes();
-  document.title = notes.company
-    ? `${notes.company} — SwyfTech discovery`
-    : "SwyfTech discovery";
-  window.print();
-  setTimeout(() => {
-    const s = loadSettings();
-    document.title = `${s.msp_name || "SwyfTech"} discovery`;
-  }, 1000);
+  const score = (state.timeline || state.current_it || state.headcount ||
+                 notes.pain_points || notes.budget || notes.top_priority)
+    ? calcScore() : null;
+  const win = window.open("", "_blank");
+  if (!win) { toast("Allow pop-ups to export PDF"); return; }
+  win.document.write(buildPrintDoc(notes, score));
+  win.document.close();
 });
 
 
