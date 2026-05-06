@@ -70,6 +70,8 @@ function getNotes() {
   });
   n.locations = state.locations;
   n.meta = state.meta;
+  n.industry_other = $("industry_other").value.trim();
+  if (n.industry === "Other" && n.industry_other) n.industry = n.industry_other;
   return n;
 }
 
@@ -87,6 +89,14 @@ function setNotes(n) {
   $("locations").textContent = state.locations;
   state.meta = n.meta || fmtMeta();
   $("meta").textContent = state.meta;
+  const otherBox = $("industry_other");
+  if (state.industry === "Other" && n.industry_other) {
+    otherBox.value = n.industry_other;
+    otherBox.style.display = "";
+  } else {
+    otherBox.value = "";
+    otherBox.style.display = "none";
+  }
 }
 
 function clearForm() {
@@ -97,6 +107,8 @@ function clearForm() {
   });
   state.locations = 1;
   $("locations").textContent = "1";
+  $("industry_other").value = "";
+  $("industry_other").style.display = "none";
   state.meeting_id = null;
   state.meta = fmtMeta();
   $("meta").textContent = state.meta;
@@ -118,6 +130,13 @@ $$(".chips").forEach((group) => {
       state[field] = chip.dataset.value;
     } else {
       state[field] = null;
+    }
+    if (field === "industry") {
+      const box = $("industry_other");
+      const show = state.industry === "Other";
+      box.style.display = show ? "" : "none";
+      if (show) box.focus();
+      else box.value = "";
     }
   });
 });
