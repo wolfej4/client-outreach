@@ -71,9 +71,47 @@ button {
 
 .brand {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   font-family: var(--display-font);
+}
+
+.logo-area {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.logo-area input[type="file"] { display: none; }
+
+.brand-logo {
+  height: 30px;
+  width: auto;
+  max-width: 100px;
+  object-fit: contain;
+  border-radius: 4px;
+  display: none;
+}
+
+.logo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 6px;
+  color: var(--hint);
+  font-size: 18px;
+  font-family: var(--body-font);
+  line-height: 1;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.logo-area:hover .logo-placeholder {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .brand-mark {
@@ -462,6 +500,26 @@ textarea {
   font-weight: 300;
 }
 
+.settings-body {
+  padding: 16px 20px 4px;
+  overflow-y: auto;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-section-label {
+  font-family: var(--display-font);
+  font-weight: 400;
+  font-size: 16px;
+  color: var(--text);
+  margin: 18px 0 4px;
+}
+
+.settings-section-label:first-child { margin-top: 0; }
+
+.settings-body .field-label { margin-top: 10px; }
+
 .toast {
   position: fixed;
   bottom: 28px;
@@ -488,4 +546,18 @@ textarea {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+@media print {
+  .topbar { position: static; backdrop-filter: none; border-bottom: 1px solid #ccc; }
+  .top-actions, .action-bar, .logo-area, .logo-placeholder { display: none !important; }
+  .brand-logo { display: block !important; }
+  .modal, .toast { display: none !important; }
+  .page { max-width: 100%; padding: 0; }
+  .card { break-inside: avoid; border: 1px solid #ccc; box-shadow: none; }
+  .chip.on { border: 1.5px solid #333; background: #eee !important; color: #333 !important; }
+  body { background: #fff; color: #000; }
+  input, textarea { border: none; background: transparent; padding: 0; font-size: 14px; }
+  .company-input { font-size: 20px; }
+  .step, .stepper-value ~ * { display: none; }
 }

@@ -24,7 +24,7 @@ services:
       SENDER_EMAIL: ${SENDER_EMAIL:-}
       SENDER_PHONE: ${SENDER_PHONE:-}
       SENDER_LOCATION: ${SENDER_LOCATION:-Crestview, FL}
-      MSP_NAME: ${MSP_NAME:-Wolfden}
+      MSP_NAME: ${MSP_NAME:-SwyfTech}
 
     extra_hosts:
       - "host.docker.internal:host-gateway"

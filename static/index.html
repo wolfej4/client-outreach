@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="Discovery"/>
 <meta name="theme-color" content="#FAF9F6" media="(prefers-color-scheme: light)"/>
 <meta name="theme-color" content="#15140F" media="(prefers-color-scheme: dark)"/>
-<title>Discovery</title>
+<title>SwyfTech discovery</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300&display=swap" rel="stylesheet"/>
@@ -17,10 +17,16 @@
 
 <header class="topbar">
   <div class="brand">
-    <span class="brand-mark" id="brandMark">Wolfden</span>
+    <label id="logoArea" class="logo-area" title="Upload logo">
+      <input type="file" id="logoInput" accept="image/*"/>
+      <img id="logoImg" class="brand-logo" alt="Logo"/>
+      <span id="logoPlaceholder" class="logo-placeholder">+</span>
+    </label>
+    <span class="brand-mark" id="brandMark">SwyfTech</span>
     <span class="brand-sub">discovery</span>
   </div>
   <div class="top-actions">
+    <button id="settingsBtn" class="ghost">Settings</button>
     <button id="historyBtn" class="ghost">Recent</button>
     <button id="newBtn" class="ghost">New</button>
   </div>
@@ -122,6 +128,7 @@
 
   <div class="action-bar">
     <button id="saveBtn" class="btn-secondary">Save</button>
+    <button id="exportBtn" class="btn-secondary">Export PDF</button>
     <button id="draftBtn" class="btn-primary">Draft follow-up email</button>
   </div>
 
@@ -152,6 +159,51 @@
       <button id="historyClose" class="ghost icon" aria-label="Close">✕</button>
     </div>
     <div id="historyList" class="history-list"></div>
+  </div>
+</div>
+
+<div id="settingsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 id="settingsTitle" class="modal-title">Settings</h2>
+      <button id="settingsClose" class="ghost icon" aria-label="Close">✕</button>
+    </div>
+    <div class="settings-body">
+      <p class="settings-section-label">Ollama</p>
+      <p class="field-label">Base URL</p>
+      <input id="settingsOllamaUrl" type="url" placeholder="http://host.docker.internal:11434" autocomplete="off" autocapitalize="off"/>
+      <p class="field-label">Model</p>
+      <input id="settingsOllamaModel" type="text" placeholder="llama3.1:8b" autocomplete="off" autocapitalize="off"/>
+
+      <p class="settings-section-label">Sender</p>
+      <div class="two-col" style="margin-top: 0;">
+        <div>
+          <p class="field-label">Name</p>
+          <input id="settingsSenderName" type="text" placeholder="Jacob" autocomplete="off" autocapitalize="words"/>
+        </div>
+        <div>
+          <p class="field-label">Title</p>
+          <input id="settingsSenderTitle" type="text" placeholder="Owner" autocomplete="off"/>
+        </div>
+      </div>
+      <div class="two-col" style="margin-top: 8px;">
+        <div>
+          <p class="field-label">Email</p>
+          <input id="settingsSenderEmail" type="email" placeholder="you@example.com" autocomplete="off" autocapitalize="off"/>
+        </div>
+        <div>
+          <p class="field-label">Phone</p>
+          <input id="settingsSenderPhone" type="tel" placeholder="+1 850 000 0000" autocomplete="off"/>
+        </div>
+      </div>
+      <p class="field-label">Location</p>
+      <input id="settingsSenderLocation" type="text" placeholder="Crestview, FL" autocomplete="off"/>
+      <p class="field-label">Company name</p>
+      <input id="settingsMspName" type="text" placeholder="SwyfTech" autocomplete="off"/>
+    </div>
+    <div class="modal-actions">
+      <button id="settingsSave" class="btn-primary">Save</button>
+    </div>
   </div>
 </div>
 
