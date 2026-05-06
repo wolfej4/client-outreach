@@ -101,6 +101,7 @@ function setNotes(n) {
   }
   state.signals = Array.isArray(n.signals) ? n.signals : [];
   renderSignalLog();
+  updateSuggestions();
   updateScore();
 }
 
@@ -117,6 +118,7 @@ function clearForm() {
   state.meeting_id = null;
   state.signals = [];
   renderSignalLog();
+  updateSuggestions();
   updateScore();
   state.meta = fmtMeta();
   $("meta").textContent = state.meta;
@@ -383,6 +385,279 @@ $("mailBtn").addEventListener("click", () => {
 $("regenBtn").addEventListener("click", draftEmail);
 
 
+// ---- proposal & ROI assist ----------------------------------------------
+
+const SOLUTIONS = [
+  {
+    id: "backup",    label: "Backup & Disaster Recovery",    short: "Backup & DR",
+    desc: "Automated daily backups, tested recovery procedures, and offsite replication.",
+    keywords: ["backup", "data loss", "lost", "restore", "recovery", "ransomware", "files", "deleted", "wiped"],
+    signalLabels: ["Data loss worry"],
+    price: 8,
+  },
+  {
+    id: "monitoring", label: "Proactive Monitoring & Alerting", short: "Monitoring",
+    desc: "24/7 monitoring of endpoints, servers, and network with automated alerting.",
+    keywords: ["downtime", "outage", "slow", "crash", "unreliable", "offline", "performance", "speed", "freezes"],
+    signalLabels: ["Downtime complaints"],
+    price: 6,
+  },
+  {
+    id: "security",  label: "Security & EDR",                 short: "Security & EDR",
+    desc: "Endpoint detection and response, threat hunting, and security awareness training.",
+    keywords: ["security", "hack", "hacked", "ransomware", "phishing", "breach", "cyber", "virus", "malware", "attack"],
+    signalLabels: ["Cybersecurity concern"],
+    price: 10,
+  },
+  {
+    id: "helpdesk",  label: "Managed Helpdesk",               short: "Helpdesk",
+    desc: "Unlimited helpdesk support with SLA-backed response times for all users.",
+    keywords: ["support", "helpdesk", "no one", "response", "ticket", "fix", "can't get help", "nobody"],
+    signalLabels: ["Complained about current provider"],
+    price: 15,
+  },
+  {
+    id: "compliance", label: "Compliance & Policy Management", short: "Compliance",
+    desc: "HIPAA, PCI-DSS, and regulatory policy documentation and ongoing management.",
+    keywords: ["compliance", "hipaa", "pci", "gdpr", "audit", "regulation", "policy", "regulated"],
+    signalLabels: ["Compliance pressure"],
+    price: 5,
+  },
+  {
+    id: "identity",  label: "Identity & Access Management",   short: "IAM",
+    desc: "MFA enforcement, SSO, password management, and periodic access reviews.",
+    keywords: ["password", "mfa", "access", "login", "account", "credential", "sharing password", "permissions"],
+    signalLabels: [],
+    price: 4,
+  },
+  {
+    id: "email",     label: "Email Security",                  short: "Email Security",
+    desc: "Advanced anti-phishing, spam filtering, and email encryption.",
+    keywords: ["email", "spam", "phishing emails", "outlook", "gmail", "exchange", "inbox"],
+    signalLabels: [],
+    price: 4,
+  },
+];
+
+const HEADCOUNT_USERS = { "1–10": 8, "11–25": 18, "26–50": 38, "51–100": 75, "100+": 100 };
+
+// Working state for the proposal modal (not persisted per meeting)
+const proposalState = { selected: {}, prices: {} };
+
+function getRecommendedIds() {
+  const text = [$("pain_points").value, $("tech_stack").value, $("extra_notes").value]
+    .join(" ").toLowerCase();
+  const activeSignals = new Set(state.signals.map((s) => s.label));
+  return new Set(
+    SOLUTIONS
+      .filter((sol) =>
+        sol.keywords.some((kw) => text.includes(kw)) ||
+        sol.signalLabels.some((sl) => activeSignals.has(sl))
+      )
+      .map((sol) => sol.id)
+  );
+}
+
+function updateSuggestions() {
+  const recommended = getRecommendedIds();
+  const el = $("painSuggestions");
+  if (recommended.size === 0) { el.innerHTML = ""; return; }
+  const tags = SOLUTIONS
+    .filter((s) => recommended.has(s.id))
+    .map((s) => `<button class="suggestion-tag" data-id="${s.id}">${escapeHtml(s.short)}</button>`)
+    .join("");
+  el.innerHTML = `<span class="suggestion-label">Suggested</span>${tags}<button class="suggestion-open" id="viewProposalLink">View proposal →</button>`;
+  el.querySelectorAll(".suggestion-tag").forEach((btn) => {
+    btn.addEventListener("click", () => openProposal([btn.dataset.id]));
+  });
+  $("viewProposalLink").addEventListener("click", () => openProposal());
+}
+
+["pain_points", "tech_stack", "extra_notes"].forEach((id) =>
+  $(id).addEventListener("input", updateSuggestions)
+);
+
+function openProposal(preselectIds = []) {
+  const recommended = getRecommendedIds();
+  preselectIds.forEach((id) => recommended.add(id));
+
+  SOLUTIONS.forEach((sol) => {
+    // Only set default selection the first time the modal opens
+    if (!(sol.id in proposalState.selected)) {
+      proposalState.selected[sol.id] = recommended.has(sol.id);
+    } else if (preselectIds.includes(sol.id)) {
+      proposalState.selected[sol.id] = true;
+    }
+    if (!(sol.id in proposalState.prices)) proposalState.prices[sol.id] = sol.price;
+  });
+
+  $("proposalUsers").value = HEADCOUNT_USERS[state.headcount] || 10;
+  renderServiceRows();
+  refreshProposalTotals();
+  generateProposalText();
+  $("proposalModal").classList.remove("hidden");
+}
+
+function renderServiceRows() {
+  const users = Number($("proposalUsers").value) || 0;
+  $("proposalServices").innerHTML = SOLUTIONS.map((sol) => {
+    const on = proposalState.selected[sol.id];
+    const lineTotal = on ? `$${((proposalState.prices[sol.id] || 0) * users).toLocaleString()}/mo` : "—";
+    return `<div class="proposal-service-row">
+      <input type="checkbox" id="ps_${sol.id}" class="proposal-check" data-id="${sol.id}" ${on ? "checked" : ""}/>
+      <label for="ps_${sol.id}" class="proposal-service-name${on ? "" : " muted"}">${escapeHtml(sol.label)}</label>
+      <div class="proposal-price-wrap">
+        $<input type="number" class="proposal-price-input" data-id="${sol.id}"
+               value="${proposalState.prices[sol.id]}" min="0" max="999"/>
+        <span>/user</span>
+      </div>
+      <span class="proposal-service-line-total${on ? " active" : ""}" id="pst_${sol.id}">${lineTotal}</span>
+    </div>`;
+  }).join("");
+
+  $("proposalServices").querySelectorAll(".proposal-check").forEach((cb) => {
+    cb.addEventListener("change", () => {
+      proposalState.selected[cb.dataset.id] = cb.checked;
+      document.querySelector(`label[for="ps_${cb.dataset.id}"]`).classList.toggle("muted", !cb.checked);
+      refreshProposalTotals();
+      generateProposalText();
+    });
+  });
+
+  $("proposalServices").querySelectorAll(".proposal-price-input").forEach((inp) => {
+    inp.addEventListener("input", () => {
+      proposalState.prices[inp.dataset.id] = Number(inp.value) || 0;
+      refreshProposalTotals();
+      generateProposalText();
+    });
+  });
+}
+
+function refreshProposalTotals() {
+  const users = Number($("proposalUsers").value) || 0;
+  let total = 0;
+  SOLUTIONS.forEach((sol) => {
+    const on = proposalState.selected[sol.id];
+    const mo = on ? (proposalState.prices[sol.id] || 0) * users : 0;
+    if (on) total += mo;
+    const el = $(`pst_${sol.id}`);
+    if (el) {
+      el.className = `proposal-service-line-total${on ? " active" : ""}`;
+      el.textContent = on ? `$${mo.toLocaleString()}/mo` : "—";
+    }
+  });
+  if (total === 0) {
+    $("proposalTotal").textContent = "—";
+  } else {
+    const perUser = users > 0 ? Math.round(total / users) : 0;
+    $("proposalTotal").textContent = `$${total.toLocaleString()}/mo · $${perUser}/user`;
+  }
+}
+
+function generateProposalText() {
+  const s = loadSettings();
+  const notes = getNotes();
+  const users = Number($("proposalUsers").value) || 0;
+  const msp = s.msp_name || "SwyfTech";
+  const date = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+  const selected = SOLUTIONS.filter((sol) => proposalState.selected[sol.id]);
+  const total = selected.reduce((sum, sol) => sum + (proposalState.prices[sol.id] || 0) * users, 0);
+  const perUser = users > 0 && total > 0 ? Math.round(total / users) : 0;
+  const hr = "─".repeat(48);
+
+  const serviceBlock = selected.length
+    ? selected.map((sol) => {
+        const mo = (proposalState.prices[sol.id] || 0) * users;
+        return `${sol.label}\n  ${sol.desc}\n  $${proposalState.prices[sol.id]}/user × ${users} users = $${mo.toLocaleString()}/mo`;
+      }).join("\n\n")
+    : "(No services selected)";
+
+  const lines = [
+    "MANAGED SERVICES PROPOSAL",
+    `${msp}  ·  ${date}`,
+    "",
+    `Prepared for:  ${notes.company || "[Company]"}`,
+    notes.contact ? `Contact:       ${notes.contact}${notes.role ? `, ${notes.role}` : ""}` : null,
+    notes.contact_email ? `Email:         ${notes.contact_email}` : null,
+    "",
+    hr,
+    "PROPOSED SERVICES",
+    hr,
+    "",
+    serviceBlock,
+    "",
+    hr,
+    "INVESTMENT SUMMARY",
+    hr,
+    "",
+    `Monthly estimate:  $${total.toLocaleString()}/mo`,
+    perUser ? `Per user:          $${perUser}/user/mo` : null,
+    total ? `Annual estimate:   $${(total * 12).toLocaleString()}/year` : null,
+    "",
+    `This is a preliminary estimate for ${users} user${users !== 1 ? "s" : ""}.`,
+    "Final pricing confirmed after a full environment assessment.",
+    "",
+    hr,
+    "",
+    s.sender_name  || null,
+    [s.sender_title, msp].filter(Boolean).join(" · ") || null,
+    s.sender_email || null,
+    s.sender_phone || null,
+  ].filter((l) => l !== null).join("\n");
+
+  $("proposalText").value = lines;
+}
+
+$("proposalUsers").addEventListener("input", () => { refreshProposalTotals(); generateProposalText(); });
+$("proposalBtn").addEventListener("click", () => openProposal());
+$("proposalClose").addEventListener("click", () => closeModal("proposalModal"));
+$("proposalRegen").addEventListener("click", generateProposalText);
+
+$("proposalCopy").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText($("proposalText").value);
+    toast("Copied");
+  } catch {
+    $("proposalText").select();
+    document.execCommand("copy");
+    toast("Copied");
+  }
+});
+
+$("proposalPDF").addEventListener("click", () => {
+  const s = loadSettings();
+  const msp = s.msp_name || "SwyfTech";
+  const logo = localStorage.getItem(LOGO_KEY);
+  const text = $("proposalText").value;
+  const title = text.split("\n").find((l) => l.startsWith("Prepared for:"))?.replace("Prepared for:", "").trim() || "Proposal";
+  const win = window.open("", "_blank");
+  if (!win) { toast("Allow pop-ups to export PDF"); return; }
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/>
+<title>${escapeHtml(title)} — ${escapeHtml(msp)}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 12pt; color: #111; margin: 0; }
+  .page { max-width: 680px; margin: 0 auto; padding: 48px 48px 64px; }
+  .doc-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; padding-bottom:18px; border-bottom:2px solid #111; }
+  .doc-logo { max-height:40px; max-width:120px; object-fit:contain; }
+  .doc-msp { font-size:11pt; font-weight:600; color:#444; }
+  .doc-date { font-size:10pt; color:#888; margin-top:3px; }
+  pre { white-space: pre-wrap; font-family: inherit; font-size: 11pt; line-height: 1.65; margin: 0; }
+  @media print { .page { padding: 24px 32px 32px; } }
+</style></head><body><div class="page">
+<div class="doc-header">
+  <div style="display:flex;align-items:center;gap:14px">
+    ${logo ? `<img class="doc-logo" src="${logo}" alt="Logo"/>` : ""}
+    <div><div class="doc-msp">${escapeHtml(msp)}</div>
+    <div class="doc-date">${new Date().toLocaleDateString(undefined, {year:"numeric",month:"long",day:"numeric"})}</div></div>
+  </div>
+  <div style="font-size:10pt;color:#888;font-style:italic">Confidential</div>
+</div>
+<pre>${escapeHtml(text)}</pre>
+</div><script>window.onload=()=>window.print();<\/script></body></html>`);
+  win.document.close();
+});
+
+
 // ---- conversation signals -----------------------------------------------
 
 const QUICK_TAPS = [
@@ -409,6 +684,7 @@ const OBJECTIONS = [
 function addSignal(label, category) {
   state.signals.push({ ts: Date.now(), label, category });
   renderSignalLog();
+  updateSuggestions();
 }
 
 function removeSignal(idx) {
