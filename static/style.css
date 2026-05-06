@@ -55,6 +55,175 @@ button {
   font-size: 15px;
 }
 
+/* ---- tabs ---- */
+
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  padding: 0 20px;
+  gap: 4px;
+}
+
+.tab-btn {
+  font-family: var(--body-font);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 11px 14px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.tab-btn--active { color: var(--text); border-bottom-color: var(--accent); }
+.tab-btn:hover:not(.tab-btn--active) { color: var(--text); }
+
+/* ---- playbooks ---- */
+
+.playbook-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.playbook-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s;
+}
+
+.playbook-header:hover { background: var(--bg); }
+
+.playbook-name { font-weight: 500; font-size: 15px; color: var(--text); }
+.playbook-tagline { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.playbook-chevron {
+  color: var(--hint);
+  font-size: 18px;
+  font-weight: 300;
+  transition: transform 0.18s ease;
+  flex-shrink: 0;
+}
+
+.playbook-card.open .playbook-chevron { transform: rotate(90deg); }
+
+.playbook-body {
+  display: none;
+  padding: 4px 20px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.playbook-card.open .playbook-body { display: block; }
+
+.playbook-section {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin: 16px 0 8px;
+}
+
+.playbook-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.playbook-list li {
+  font-size: 14px;
+  color: var(--text);
+  padding-left: 14px;
+  position: relative;
+  line-height: 1.45;
+}
+
+.playbook-list li::before { content: "·"; position: absolute; left: 2px; color: var(--muted); }
+.playbook-list li.warn { color: var(--danger); }
+
+.playbook-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.playbook-tag {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.playbook-pitch {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--accent-soft);
+  border-left: 3px solid var(--accent);
+  padding: 10px 14px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  margin-top: 2px;
+}
+
+/* ---- proposal version history ---- */
+
+.proposal-version-history:empty { display: none; }
+
+.proposal-version-heading {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  margin: 14px 0 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.proposal-version-history { margin: 0 20px 14px; flex-shrink: 0; }
+
+.proposal-version-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.proposal-version-row:last-child { border-bottom: none; }
+
+.proposal-version-num { font-weight: 600; color: var(--text); min-width: 22px; flex-shrink: 0; }
+.proposal-version-date { color: var(--muted); flex-shrink: 0; }
+.proposal-version-preview { flex: 1; color: var(--hint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.proposal-version-load {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--body-font);
+  flex-shrink: 0;
+  transition: border-color 0.1s;
+}
+
+.proposal-version-load:hover { border-color: var(--text); }
+
 .topbar {
   position: sticky;
   top: 0;

@@ -33,7 +33,12 @@
   </div>
 </header>
 
-<main class="page">
+<div class="tab-bar">
+  <button class="tab-btn tab-btn--active" id="tabDiscovery">Discovery</button>
+  <button class="tab-btn" id="tabPlaybooks">Playbooks</button>
+</div>
+
+<main class="page" id="discoveryPage">
 
   <section class="card head-card">
     <div class="head-row">
@@ -157,6 +162,8 @@
 
 </main>
 
+<div class="page" id="playbooksPage" style="display:none"></div>
+
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
   <div class="modal-card">
     <div class="modal-head">
@@ -202,10 +209,12 @@
         </div>
       </div>
       <textarea id="proposalText" class="proposal-text" rows="14" spellcheck="true"></textarea>
+      <div id="proposalVersionHistory" class="proposal-version-history"></div>
     </div>
     <div class="modal-actions">
       <button id="proposalCopy" class="btn-secondary">Copy</button>
-      <button id="proposalRegen" class="btn-secondary">Regenerate</button>
+      <button id="proposalSaveVersion" class="btn-secondary">Save v1</button>
+      <button id="proposalRegen" class="btn-secondary">Regen</button>
       <button id="proposalPDF" class="btn-secondary">Export PDF</button>
     </div>
   </div>
