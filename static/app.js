@@ -25,6 +25,7 @@ const state = {
   meta: "",
   config: { sender_location: "", sender_name: "", model: "" },
   signals: [],
+  proposal_versions: [],
 };
 
 const $ = (id) => document.getElementById(id);
@@ -74,6 +75,7 @@ function getNotes() {
   n.industry_other = $("industry_other").value.trim();
   if (n.industry === "Other" && n.industry_other) n.industry = n.industry_other;
   n.signals = state.signals.slice();
+  n.proposal_versions = state.proposal_versions.slice();
   return n;
 }
 
@@ -100,6 +102,7 @@ function setNotes(n) {
     otherBox.style.display = "none";
   }
   state.signals = Array.isArray(n.signals) ? n.signals : [];
+  state.proposal_versions = Array.isArray(n.proposal_versions) ? n.proposal_versions : [];
   renderSignalLog();
   updateSuggestions();
   updateScore();
@@ -117,6 +120,7 @@ function clearForm() {
   $("industry_other").style.display = "none";
   state.meeting_id = null;
   state.signals = [];
+  state.proposal_versions = [];
   renderSignalLog();
   updateSuggestions();
   updateScore();
@@ -495,6 +499,8 @@ function openProposal(preselectIds = []) {
   renderServiceRows();
   refreshProposalTotals();
   generateProposalText();
+  renderVersionHistory();
+  updateVersionBtn();
   $("proposalModal").classList.remove("hidden");
 }
 
@@ -877,6 +883,235 @@ function updateScore() {
 ["pain_points", "budget", "top_priority"].forEach((id) =>
   $(id).addEventListener("input", updateScore)
 );
+
+
+// ---- tabs ---------------------------------------------------------------
+
+function switchTab(tab) {
+  const onDiscovery = tab === "discovery";
+  $("discoveryPage").style.display = onDiscovery ? "" : "none";
+  $("playbooksPage").style.display  = onDiscovery ? "none" : "";
+  $("tabDiscovery").classList.toggle("tab-btn--active",  onDiscovery);
+  $("tabPlaybooks").classList.toggle("tab-btn--active", !onDiscovery);
+  if (!onDiscovery) renderPlaybooks();
+}
+
+$("tabDiscovery").addEventListener("click", () => switchTab("discovery"));
+$("tabPlaybooks").addEventListener("click", () => switchTab("playbooks"));
+
+
+// ---- playbooks ----------------------------------------------------------
+
+const PLAYBOOKS = [
+  {
+    id: "healthcare", name: "Healthcare", tagline: "Patient safety angle — compliance first",
+    ask: [
+      "HIPAA compliance gaps or upcoming audits",
+      "EHR/EMR downtime disrupting patient care",
+      "Staff sharing credentials or using personal devices",
+      "No formal incident response or business associate agreements",
+    ],
+    decisionMakers: ["Practice Manager", "Office Manager", "CMO", "CFO"],
+    compliance: "HIPAA — offer a BAA on day one. Ask when they last did a formal risk assessment.",
+    services: ["compliance", "backup", "security", "identity"],
+    pitch: "Frame IT as patient safety, not overhead. A breach averages $10M in fines — and most practices carry no cyber insurance.",
+    watchouts: ["Already covered by hospital IT", "Locked into EHR vendor support contract"],
+  },
+  {
+    id: "legal", name: "Legal", tagline: "Confidentiality and uptime are everything",
+    ask: [
+      "Client data confidentiality and privilege concerns",
+      "Document management chaos or version control issues",
+      "Billing system downtime affecting collections",
+      "Remote access security for attorneys working off-site",
+    ],
+    decisionMakers: ["Managing Partner", "Office Manager", "COO"],
+    compliance: "Bar association ethics rules on data security vary by state — some mandate specific safeguards.",
+    services: ["security", "backup", "identity", "monitoring"],
+    pitch: "A breach of client privilege can end a firm. Position yourself as protecting their license to practice, not just their hardware.",
+    watchouts: ["Solo practitioners resistant to recurring fees", "Already with a national legal IT firm"],
+  },
+  {
+    id: "pro_services", name: "Professional Services", tagline: "Productivity and remote work focus",
+    ask: [
+      "Remote and hybrid work creating security gaps",
+      "No consistent onboarding or offboarding process",
+      "Collaboration tool sprawl with poor integration",
+      "Slow machines killing billable time",
+    ],
+    decisionMakers: ["CEO/Owner", "COO", "Office Manager"],
+    compliance: "SOC 2 Type II increasingly required by enterprise clients — worth asking if they're pitching up-market.",
+    services: ["identity", "monitoring", "security", "helpdesk"],
+    pitch: "Quantify the waste: 10 staff × $150/hr billable rate × 2 hrs/month of IT friction = $3,000/mo burned on nothing.",
+    watchouts: ["'We use M365 so we're fine' mindset", "Headcount fluctuates — resistant to per-user pricing"],
+  },
+  {
+    id: "construction", name: "Construction", tagline: "Job site connectivity, rugged environments",
+    ask: [
+      "Field-to-office data sync and job site connectivity",
+      "Device loss or damage on site",
+      "Project management and estimating software reliability",
+      "Payroll and accounting system uptime",
+    ],
+    decisionMakers: ["Owner", "Project Manager", "CFO", "Operations Manager"],
+    compliance: "OSHA recordkeeping. Union environments may add requirements. Bonded contracts sometimes require documented IT controls.",
+    services: ["backup", "monitoring", "helpdesk", "identity"],
+    pitch: "Accounting downtime can delay subcontractor payments and stall a job site. Connect IT reliability directly to project delivery.",
+    watchouts: ["Seasonal cash flow makes fixed monthly fees a tough sell", "Owner does IT themselves on weekends"],
+  },
+  {
+    id: "retail", name: "Retail", tagline: "POS uptime and PCI compliance",
+    ask: [
+      "POS outages losing sales during peak hours",
+      "PCI-DSS compliance for card processing",
+      "Inventory system accuracy and sync across locations",
+      "High staff turnover creating credential sprawl",
+    ],
+    decisionMakers: ["Owner", "Store Manager", "CFO"],
+    compliance: "PCI-DSS — non-compliance fines and card processor termination are existential risks.",
+    services: ["compliance", "monitoring", "backup", "identity"],
+    pitch: "One POS outage on a busy Saturday can cost more than a year of managed services. Lead with uptime SLAs tied to peak hours.",
+    watchouts: ["Thin margins = high price sensitivity", "Franchisees locked into franchisor IT vendors"],
+  },
+  {
+    id: "manufacturing", name: "Manufacturing", tagline: "OT/IT convergence — uptime is production",
+    ask: [
+      "Operational technology systems connecting to IT networks",
+      "Legacy equipment with no patch or update support",
+      "Supply chain software integration and reliability",
+      "Shift workers sharing devices and credentials",
+    ],
+    decisionMakers: ["Plant Manager", "Operations Manager", "CEO", "CFO"],
+    compliance: "CMMC for defense contractors. ISO 27001 for larger operations. Ask about their biggest customer's requirements.",
+    services: ["monitoring", "security", "backup", "compliance"],
+    pitch: "Find what one hour of line downtime costs, then do the math. Ransomware on the production floor stops everything — the ROI on prevention sells itself.",
+    watchouts: ["OT vendors claim IT responsibility", "CAPEX mindset resistant to OPEX/subscription pricing"],
+  },
+  {
+    id: "hospitality", name: "Hospitality", tagline: "Guest experience — POS and PMS uptime",
+    ask: [
+      "PMS or POS downtime affecting guest check-in",
+      "Guest WiFi reliability and security segmentation",
+      "High staff turnover and shared device credentials",
+      "Payment card security and PCI compliance",
+    ],
+    decisionMakers: ["General Manager", "Owner", "F&B Director"],
+    compliance: "PCI-DSS for payments. GDPR if international guests. Some brands have franchisor IT standards.",
+    services: ["monitoring", "compliance", "security", "backup"],
+    pitch: "A guest who can't check in or whose card is compromised leaves a 1-star review that costs far more than IT. IT is guest experience.",
+    watchouts: ["Seasonal business makes consistent billing harder", "Corporate-managed properties controlled by parent IT"],
+  },
+  {
+    id: "nonprofit", name: "Nonprofit", tagline: "Grant compliance, donor trust, tight budgets",
+    ask: [
+      "Donor data security and CRM reliability",
+      "Grant compliance requiring specific IT controls",
+      "Volunteer and remote staff access management",
+      "Outdated equipment with no replacement budget",
+    ],
+    decisionMakers: ["Executive Director", "COO", "Board Chair"],
+    compliance: "Grant-specific requirements vary widely. 501(c)(3) status does not exempt from data breach liability or donor notification laws.",
+    services: ["backup", "security", "identity", "compliance"],
+    pitch: "A donor data breach destroys trust built over years. Lead with Microsoft and Google nonprofit discounts — they often offset most of your fee.",
+    watchouts: ["Board approval required — long sales cycle", "Expects nonprofit discounts on your services too"],
+  },
+];
+
+let playbooksRendered = false;
+
+function renderPlaybooks() {
+  if (playbooksRendered) return;
+  playbooksRendered = true;
+  $("playbooksPage").innerHTML = PLAYBOOKS.map((pb) => {
+    const serviceChips = pb.services
+      .map((id) => SOLUTIONS.find((s) => s.id === id))
+      .filter(Boolean)
+      .map((s) => `<span class="playbook-tag">${escapeHtml(s.short)}</span>`)
+      .join("");
+    return `
+      <div class="playbook-card" id="pb_${pb.id}">
+        <div class="playbook-header" data-id="${pb.id}">
+          <div>
+            <div class="playbook-name">${escapeHtml(pb.name)}</div>
+            <div class="playbook-tagline">${escapeHtml(pb.tagline)}</div>
+          </div>
+          <span class="playbook-chevron">›</span>
+        </div>
+        <div class="playbook-body">
+          <p class="playbook-section">Ask about</p>
+          <ul class="playbook-list">${pb.ask.map((q) => `<li>${escapeHtml(q)}</li>`).join("")}</ul>
+
+          <p class="playbook-section">Decision-makers</p>
+          <div class="playbook-tags">${pb.decisionMakers.map((d) => `<span class="playbook-tag">${escapeHtml(d)}</span>`).join("")}</div>
+
+          <p class="playbook-section">Compliance</p>
+          <p style="font-size:13.5px;line-height:1.5;color:var(--text);margin:0">${escapeHtml(pb.compliance)}</p>
+
+          <p class="playbook-section">Recommended services</p>
+          <div class="playbook-tags">${serviceChips}</div>
+
+          <p class="playbook-section">Pitch angle</p>
+          <div class="playbook-pitch">${escapeHtml(pb.pitch)}</div>
+
+          <p class="playbook-section">Watch out for</p>
+          <ul class="playbook-list">${pb.watchouts.map((w) => `<li class="warn">${escapeHtml(w)}</li>`).join("")}</ul>
+        </div>
+      </div>`;
+  }).join("");
+
+  $("playbooksPage").querySelectorAll(".playbook-header").forEach((h) => {
+    h.addEventListener("click", () => $(`pb_${h.dataset.id}`).classList.toggle("open"));
+  });
+}
+
+
+// ---- proposal versioning ------------------------------------------------
+
+function nextVersionNumber() {
+  return state.proposal_versions.length
+    ? Math.max(...state.proposal_versions.map((v) => v.v)) + 1
+    : 1;
+}
+
+function updateVersionBtn() {
+  $("proposalSaveVersion").textContent = `Save v${nextVersionNumber()}`;
+}
+
+function renderVersionHistory() {
+  const el = $("proposalVersionHistory");
+  if (state.proposal_versions.length === 0) { el.innerHTML = ""; return; }
+  const rows = [...state.proposal_versions].reverse().map((pv) => {
+    const totalLine = pv.text.split("\n").find((l) => l.startsWith("Monthly estimate:"));
+    const preview = totalLine ? totalLine.replace("Monthly estimate:", "").trim() : "—";
+    const date = new Date(pv.ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return `<div class="proposal-version-row">
+      <span class="proposal-version-num">v${pv.v}</span>
+      <span class="proposal-version-date">${date}</span>
+      <span class="proposal-version-preview">${escapeHtml(preview)}</span>
+      <button class="proposal-version-load" data-v="${pv.v}">Load</button>
+    </div>`;
+  }).join("");
+  el.innerHTML = `<p class="proposal-version-heading">Saved versions</p>${rows}`;
+  el.querySelectorAll(".proposal-version-load").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const pv = state.proposal_versions.find((p) => p.v === Number(btn.dataset.v));
+      if (pv) { $("proposalText").value = pv.text; toast(`Loaded v${pv.v}`); }
+    });
+  });
+}
+
+function saveProposalVersion() {
+  const text = $("proposalText").value.trim();
+  if (!text) { toast("Nothing to save"); return; }
+  const v = nextVersionNumber();
+  state.proposal_versions.push({ v, ts: Date.now(), text });
+  renderVersionHistory();
+  updateVersionBtn();
+  if (state.meeting_id) saveCurrent();
+  toast(`Saved v${v}`);
+}
+
+$("proposalSaveVersion").addEventListener("click", saveProposalVersion);
 
 
 // ---- logo ---------------------------------------------------------------
