@@ -1,4 +1,4 @@
-// Wolfden Discovery — frontend logic
+// SwyfTech Discovery — frontend logic
 // Pure vanilla JS. No build step, no framework.
 
 const TEXT_FIELDS = [
@@ -9,8 +9,11 @@ const TEXT_FIELDS = [
 
 const CHIP_FIELDS = ["industry", "headcount", "current_it", "timeline"];
 
-const HISTORY_KEY = "wolfden.discovery.history";
+const HISTORY_KEY_OLD = "wolfden.discovery.history";
+const HISTORY_KEY = "swyftech.discovery.history";
 const HISTORY_LIMIT = 50;
+const LOGO_KEY = "swyftech.discovery.logo";
+const SETTINGS_KEY = "swyftech.discovery.settings";
 
 const state = {
   industry: null,
@@ -251,10 +254,20 @@ async function draftEmail() {
   inFlightController = new AbortController();
 
   try {
+    const settings = loadSettings();
+    const payload = Object.assign({}, notes, {
+      _ollama_url:   settings.ollama_url   || undefined,
+      _ollama_model: settings.ollama_model || undefined,
+      _sender_name:  settings.sender_name  || undefined,
+      _sender_title: settings.sender_title || undefined,
+      _sender_email: settings.sender_email || undefined,
+      _sender_phone: settings.sender_phone || undefined,
+      _msp_name:     settings.msp_name     || undefined,
+    });
     const resp = await fetch("/api/draft-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(notes),
+      body: JSON.stringify(payload),
       signal: inFlightController.signal,
     });
     const data = await resp.json();
@@ -342,7 +355,110 @@ $("mailBtn").addEventListener("click", () => {
 $("regenBtn").addEventListener("click", draftEmail);
 
 
+// ---- logo ---------------------------------------------------------------
+
+function setLogo(dataUrl) {
+  const img = $("logoImg");
+  img.src = dataUrl;
+  img.style.display = "";
+  $("logoPlaceholder").style.display = "none";
+}
+
+$("logoInput").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    localStorage.setItem(LOGO_KEY, ev.target.result);
+    setLogo(ev.target.result);
+    toast("Logo saved");
+  };
+  reader.readAsDataURL(file);
+});
+
+
+// ---- settings -----------------------------------------------------------
+
+function loadSettings() {
+  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}"); }
+  catch { return {}; }
+}
+
+function applySettings(s) {
+  if (s.msp_name) {
+    $("brandMark").textContent = s.msp_name;
+    document.title = `${s.msp_name} discovery`;
+  }
+  if (s.sender_location) state.config.sender_location = s.sender_location;
+  if (s.sender_name)     state.config.sender_name     = s.sender_name;
+  if (s.ollama_model)    state.config.model            = s.ollama_model;
+  state.meta = fmtMeta();
+  $("meta").textContent = state.meta;
+  if (s.ollama_model) $("modelFootnote").textContent = `Drafts via ${s.ollama_model}`;
+}
+
+function openSettings() {
+  const s = loadSettings();
+  $("settingsOllamaUrl").value      = s.ollama_url      || "";
+  $("settingsOllamaModel").value    = s.ollama_model    || "";
+  $("settingsSenderName").value     = s.sender_name     || "";
+  $("settingsSenderTitle").value    = s.sender_title    || "";
+  $("settingsSenderEmail").value    = s.sender_email    || "";
+  $("settingsSenderPhone").value    = s.sender_phone    || "";
+  $("settingsSenderLocation").value = s.sender_location || "";
+  $("settingsMspName").value        = s.msp_name        || "";
+  $("settingsModal").classList.remove("hidden");
+}
+
+function saveSettings() {
+  const s = {
+    ollama_url:      $("settingsOllamaUrl").value.trim(),
+    ollama_model:    $("settingsOllamaModel").value.trim(),
+    sender_name:     $("settingsSenderName").value.trim(),
+    sender_title:    $("settingsSenderTitle").value.trim(),
+    sender_email:    $("settingsSenderEmail").value.trim(),
+    sender_phone:    $("settingsSenderPhone").value.trim(),
+    sender_location: $("settingsSenderLocation").value.trim(),
+    msp_name:        $("settingsMspName").value.trim(),
+  };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  applySettings(s);
+  closeModal("settingsModal");
+  toast("Settings saved");
+}
+
+$("settingsBtn").addEventListener("click", openSettings);
+$("settingsSave").addEventListener("click", saveSettings);
+$("settingsClose").addEventListener("click", () => closeModal("settingsModal"));
+
+
+// ---- PDF export ---------------------------------------------------------
+
+$("exportBtn").addEventListener("click", () => {
+  const notes = getNotes();
+  document.title = notes.company
+    ? `${notes.company} — SwyfTech discovery`
+    : "SwyfTech discovery";
+  window.print();
+  setTimeout(() => {
+    const s = loadSettings();
+    document.title = `${s.msp_name || "SwyfTech"} discovery`;
+  }, 1000);
+});
+
+
 // ---- init ---------------------------------------------------------------
+
+// Migrate history from old brand key
+(function () {
+  if (!localStorage.getItem(HISTORY_KEY) && localStorage.getItem(HISTORY_KEY_OLD)) {
+    localStorage.setItem(HISTORY_KEY, localStorage.getItem(HISTORY_KEY_OLD));
+  }
+})();
+
+// Restore logo
+const _savedLogo = localStorage.getItem(LOGO_KEY);
+if (_savedLogo) setLogo(_savedLogo);
 
 state.meta = fmtMeta();
 $("meta").textContent = state.meta;
@@ -360,7 +476,9 @@ fetch("/api/config")
     if (cfg.model) {
       $("modelFootnote").textContent = `Drafts via ${cfg.model}`;
     }
+    // Local settings override server config
+    applySettings(loadSettings());
   })
   .catch(() => {
-    // /api/config is optional; ignore failures
+    applySettings(loadSettings());
   });

@@ -1,5 +1,5 @@
 """
-Wolfden Discovery — MSP discovery notes app.
+SwyfTech Discovery — MSP discovery notes app.
 
 A small Flask app that serves a single-page UI for capturing notes during
 in-person MSP discovery meetings, and drafts a follow-up email by calling
@@ -162,17 +162,21 @@ def config():
 def draft_email():
     notes = request.get_json(silent=True) or {}
 
+    # Allow frontend settings to override server env vars
+    ollama_url   = (notes.pop("_ollama_url",   None) or OLLAMA_BASE_URL).rstrip("/")
+    ollama_model = notes.pop("_ollama_model", None) or OLLAMA_MODEL
+
     sender = {
-        "name": SENDER_NAME,
-        "title": SENDER_TITLE,
-        "msp": MSP_NAME,
-        "email": SENDER_EMAIL,
-        "phone": SENDER_PHONE,
+        "name":  notes.pop("_sender_name",  None) or SENDER_NAME,
+        "title": notes.pop("_sender_title", None) or SENDER_TITLE,
+        "msp":   notes.pop("_msp_name",     None) or MSP_NAME,
+        "email": notes.pop("_sender_email", None) or SENDER_EMAIL,
+        "phone": notes.pop("_sender_phone", None) or SENDER_PHONE,
     }
     user_prompt = build_user_prompt(notes, sender)
 
     payload = {
-        "model": OLLAMA_MODEL,
+        "model": ollama_model,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
@@ -181,11 +185,11 @@ def draft_email():
         "temperature": 0.7,
     }
 
-    log.info("Drafting email for company=%r model=%s", notes.get("company"), OLLAMA_MODEL)
+    log.info("Drafting email for company=%r model=%s", notes.get("company"), ollama_model)
 
     try:
         resp = requests.post(
-            f"{OLLAMA_BASE_URL}/v1/chat/completions",
+            f"{ollama_url}/v1/chat/completions",
             json=payload,
             timeout=OLLAMA_TIMEOUT,
         )
@@ -193,13 +197,13 @@ def draft_email():
         return jsonify(error=(
             f"Ollama timed out after {OLLAMA_TIMEOUT}s. The model may be loading "
             "(first run pulls weights into RAM) or the hardware is too slow for "
-            f"{OLLAMA_MODEL}. Try a smaller model like llama3.2:3b."
+            f"{ollama_model}. Try a smaller model like llama3.2:3b."
         )), 504
     except requests.exceptions.ConnectionError:
         return jsonify(error=(
-            f"Cannot reach Ollama at {OLLAMA_BASE_URL}. Check the OLLAMA_BASE_URL "
-            "env var, that Ollama is running, and that the container can reach it "
-            "(see README on Docker networking)."
+            f"Cannot reach Ollama at {ollama_url}. Check the URL in Settings "
+            "or the OLLAMA_BASE_URL env var, confirm Ollama is running, and that "
+            "the container can reach it (see README on Docker networking)."
         )), 502
     except requests.exceptions.RequestException as e:
         return jsonify(error=f"Request to Ollama failed: {e}"), 502
@@ -215,7 +219,7 @@ def draft_email():
     except (ValueError, KeyError, IndexError, TypeError) as e:
         return jsonify(error=f"Unexpected response shape from Ollama: {e}"), 502
 
-    return jsonify(draft=draft, model=OLLAMA_MODEL)
+    return jsonify(draft=draft, model=ollama_model)
 
 
 if __name__ == "__main__":
