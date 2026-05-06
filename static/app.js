@@ -97,6 +97,7 @@ function setNotes(n) {
     otherBox.value = "";
     otherBox.style.display = "none";
   }
+  updateScore();
 }
 
 function clearForm() {
@@ -110,6 +111,7 @@ function clearForm() {
   $("industry_other").value = "";
   $("industry_other").style.display = "none";
   state.meeting_id = null;
+  updateScore();
   state.meta = fmtMeta();
   $("meta").textContent = state.meta;
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -138,6 +140,7 @@ $$(".chips").forEach((group) => {
       if (show) box.focus();
       else box.value = "";
     }
+    updateScore();
   });
 });
 
@@ -372,6 +375,51 @@ $("mailBtn").addEventListener("click", () => {
 });
 
 $("regenBtn").addEventListener("click", draftEmail);
+
+
+// ---- lead score ---------------------------------------------------------
+
+const SCORE_TIMELINE  = { "ASAP": 3, "30 days": 2, "60–90 days": 1, "Exploring": 0 };
+const SCORE_CURRENT_IT = { "No one": 2, "Break-fix vendor": 2, "Another MSP": 1, "Internal hire": 1 };
+const SCORE_HEADCOUNT  = { "1–10": 0, "11–25": 1, "26–50": 1, "51–100": 2, "100+": 2 };
+
+function calcScore() {
+  let s = 0;
+  s += SCORE_TIMELINE[state.timeline]    ?? 0;
+  s += SCORE_CURRENT_IT[state.current_it] ?? 0;
+  s += SCORE_HEADCOUNT[state.headcount]   ?? 0;
+  if ($("pain_points").value.trim())  s += 1;
+  if ($("budget").value.trim())       s += 1;
+  if ($("top_priority").value.trim()) s += 1;
+  return s;
+}
+
+function updateScore() {
+  const el = $("leadScore");
+  const hasAny = state.timeline || state.current_it || state.headcount ||
+                 $("pain_points").value.trim() || $("budget").value.trim() ||
+                 $("top_priority").value.trim();
+  if (!hasAny) {
+    el.textContent = "–";
+    el.className = "lead-score lead-score--empty";
+    el.title = "Lead score — fill in the form to see a score";
+    return;
+  }
+  const score = calcScore();
+  el.textContent = score;
+  el.className = "lead-score " + (score >= 7 ? "lead-score--high" : score >= 4 ? "lead-score--mid" : "lead-score--low");
+  el.title = [
+    `Lead score: ${score}/10`,
+    `Timeline:   ${SCORE_TIMELINE[state.timeline]    ?? 0}/3`,
+    `Current IT: ${SCORE_CURRENT_IT[state.current_it] ?? 0}/2`,
+    `Headcount:  ${SCORE_HEADCOUNT[state.headcount]   ?? 0}/2`,
+    `Engagement: ${($("pain_points").value.trim()?1:0) + ($("budget").value.trim()?1:0) + ($("top_priority").value.trim()?1:0)}/3`,
+  ].join("\n");
+}
+
+["pain_points", "budget", "top_priority"].forEach((id) =>
+  $(id).addEventListener("input", updateScore)
+);
 
 
 // ---- logo ---------------------------------------------------------------

@@ -188,6 +188,37 @@ button {
   .card { padding: 16px 16px; }
 }
 
+.lead-score {
+  font-family: var(--body-font);
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 9px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: default;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.lead-score--empty {
+  background: var(--border);
+  color: var(--hint);
+}
+
+.lead-score--low  { background: rgba(153, 27, 27, 0.12); color: #991B1B; }
+.lead-score--mid  { background: rgba(180, 83,  9, 0.12); color: #B45309; }
+.lead-score--high { background: rgba( 21,128, 61, 0.12); color: #15803D; }
+
+@media (prefers-color-scheme: dark) {
+  .lead-score--low  { background: rgba(153, 27, 27, 0.22); color: #FCA5A5; }
+  .lead-score--mid  { background: rgba(180, 83,  9, 0.22); color: #FCD34D; }
+  .lead-score--high { background: rgba( 21,128, 61, 0.22); color: #86EFAC; }
+}
+
 .meta {
   font-family: var(--display-font);
   font-style: italic;
