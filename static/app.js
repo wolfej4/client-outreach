@@ -1187,6 +1187,8 @@ function applySettings(s) {
   state.meta = fmtMeta();
   $("meta").textContent = state.meta;
   if (s.ollama_model) $("modelFootnote").textContent = `Drafts via ${s.ollama_model}`;
+  // Keep localStorage in sync as offline fallback
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
 }
 
 function openSettings() {
@@ -1199,10 +1201,24 @@ function openSettings() {
   $("settingsSenderPhone").value    = s.sender_phone    || "";
   $("settingsSenderLocation").value = s.sender_location || "";
   $("settingsMspName").value        = s.msp_name        || "";
+  // Refresh from server so we show the latest saved values
+  fetch("/api/settings")
+    .then((r) => r.json())
+    .then((s) => {
+      $("settingsOllamaUrl").value      = s.ollama_url      || "";
+      $("settingsOllamaModel").value    = s.ollama_model    || "";
+      $("settingsSenderName").value     = s.sender_name     || "";
+      $("settingsSenderTitle").value    = s.sender_title    || "";
+      $("settingsSenderEmail").value    = s.sender_email    || "";
+      $("settingsSenderPhone").value    = s.sender_phone    || "";
+      $("settingsSenderLocation").value = s.sender_location || "";
+      $("settingsMspName").value        = s.msp_name        || "";
+    })
+    .catch(() => {});
   $("settingsModal").classList.remove("hidden");
 }
 
-function saveSettings() {
+async function saveSettings() {
   const s = {
     ollama_url:      $("settingsOllamaUrl").value.trim(),
     ollama_model:    $("settingsOllamaModel").value.trim(),
@@ -1213,10 +1229,19 @@ function saveSettings() {
     sender_location: $("settingsSenderLocation").value.trim(),
     msp_name:        $("settingsMspName").value.trim(),
   };
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
   applySettings(s);
   closeModal("settingsModal");
-  toast("Settings saved");
+  try {
+    const r = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(s),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    toast("Settings saved");
+  } catch (e) {
+    toast("Saved locally (server unreachable)");
+  }
 }
 
 $("settingsBtn").addEventListener("click", openSettings);
@@ -1462,21 +1487,14 @@ if (_savedLogo) setLogo(_savedLogo);
 state.meta = fmtMeta();
 $("meta").textContent = state.meta;
 
-fetch("/api/config")
+fetch("/api/settings")
   .then((r) => r.json())
-  .then((cfg) => {
-    state.config = cfg || {};
-    if (cfg.msp_name) {
-      $("brandMark").textContent = cfg.msp_name;
-      document.title = `${cfg.msp_name} discovery`;
-    }
-    state.meta = fmtMeta();
-    $("meta").textContent = state.meta;
-    if (cfg.model) {
-      $("modelFootnote").textContent = `Drafts via ${cfg.model}`;
-    }
-    // Local settings override server config
-    applySettings(loadSettings());
+  .then((s) => {
+    // Merge server settings into config (model key comes from ollama_model)
+    state.config.sender_location = s.sender_location || state.config.sender_location;
+    state.config.sender_name     = s.sender_name     || state.config.sender_name;
+    state.config.model           = s.ollama_model    || state.config.model;
+    applySettings(s);
   })
   .catch(() => {
     applySettings(loadSettings());

@@ -9,8 +9,10 @@ Configuration is via environment variables — see README.md.
 """
 from __future__ import annotations
 
+import json
 import os
 import logging
+from pathlib import Path
 from typing import Any
 
 import requests
@@ -31,6 +33,29 @@ SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "")
 SENDER_PHONE = os.environ.get("SENDER_PHONE", "")
 SENDER_LOCATION = os.environ.get("SENDER_LOCATION", "")
 MSP_NAME = os.environ.get("MSP_NAME", "")
+
+DATA_DIR = Path(os.environ.get("DATA_DIR", "/app/data"))
+SETTINGS_FILE = DATA_DIR / "settings.json"
+
+SETTINGS_KEYS = {
+    "ollama_url", "ollama_model",
+    "sender_name", "sender_title", "sender_email", "sender_phone",
+    "sender_location", "msp_name",
+}
+
+
+# ---- Settings helpers -------------------------------------------------------
+
+def load_settings_file() -> dict:
+    try:
+        return json.loads(SETTINGS_FILE.read_text())
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_settings_file(data: dict) -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    SETTINGS_FILE.write_text(json.dumps(data, indent=2))
 
 
 # ---- Prompts --------------------------------------------------------------
@@ -189,6 +214,38 @@ def config():
         msp_name=MSP_NAME,
         model=OLLAMA_MODEL,
     )
+
+
+@app.route("/api/settings", methods=["GET"])
+def get_settings():
+    """Return saved settings, falling back to env-var defaults."""
+    saved = load_settings_file()
+    defaults = {
+        "ollama_url":      OLLAMA_BASE_URL,
+        "ollama_model":    OLLAMA_MODEL,
+        "sender_name":     SENDER_NAME,
+        "sender_title":    SENDER_TITLE,
+        "sender_email":    SENDER_EMAIL,
+        "sender_phone":    SENDER_PHONE,
+        "sender_location": SENDER_LOCATION,
+        "msp_name":        MSP_NAME,
+    }
+    merged = {k: saved.get(k) or v for k, v in defaults.items()}
+    return jsonify(merged)
+
+
+@app.route("/api/settings", methods=["POST"])
+def post_settings():
+    """Persist settings to data/settings.json."""
+    body = request.get_json(silent=True) or {}
+    cleaned = {k: str(v).strip() for k, v in body.items() if k in SETTINGS_KEYS}
+    try:
+        save_settings_file(cleaned)
+    except OSError as e:
+        log.error("Could not write settings: %s", e)
+        return jsonify(error=f"Could not save settings: {e}"), 500
+    log.info("Settings saved: %s", list(cleaned.keys()))
+    return jsonify(ok=True)
 
 
 @app.route("/api/draft-email", methods=["POST"])

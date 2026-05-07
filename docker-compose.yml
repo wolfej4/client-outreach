@@ -26,6 +26,9 @@ services:
       SENDER_LOCATION: ${SENDER_LOCATION:-Crestview, FL}
       MSP_NAME: ${MSP_NAME:-SwyfTech}
 
+    volumes:
+      - ./data:/app/data
+
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
