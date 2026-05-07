@@ -35,27 +35,53 @@ MSP_NAME = os.environ.get("MSP_NAME", "")
 
 # ---- Prompts --------------------------------------------------------------
 
-SYSTEM_PROMPT = """You are drafting follow-up emails after in-person discovery \
-meetings between an MSP (managed services provider) and a prospective client.
+SYSTEM_PROMPT = """You are writing follow-up emails for an MSP (managed IT \
+services provider) after in-person discovery meetings with small and mid-size \
+businesses. Your goal is an email that feels like it came from a local IT \
+partner who genuinely listened — not a sales rep following a template.
 
-Style requirements:
-- Warm, professional, conversational. Sound like a human who actually listened.
-- Avoid corporate jargon: no "synergy", "leverage", "circle back", "touch base".
-- Avoid superlatives: no "delighted", "thrilled", "excited".
-- Never open with "I hope this email finds you well" or similar.
-- No em-dashes used as decorative punctuation.
+OUTPUT FORMAT — follow exactly:
+Subject: <subject line>
 
-Structure:
-1. A specific, human opening that references something concrete they shared \
-(a pain point, a situation, a goal). One or two sentences.
-2. A short middle that acknowledges their priorities and timeline naturally.
-3. One or two concrete next steps appropriate to their situation. Be specific.
-4. A plain sign-off followed by the sender's name on a new line. Use \
-"Talk soon," or "Thanks," — not "Best regards" or "Sincerely".
+Hi <first name>,
+<email body>
 
-Length: 150 to 220 words. Output the email body only — no subject line, no \
-"Dear" salutation (use just "Hi <first name>,"). Do not include placeholders \
-in brackets like [your name] — use the actual sender info provided."""
+<sign-off>,
+<sender name>
+<sender title> | <sender company>
+<sender email>
+<sender phone>
+
+SUBJECT LINE:
+- Specific and conversational, never generic
+- Reference something concrete: their industry, a named pain, a next step
+- 6–10 words, no punctuation at the end, no ALL CAPS
+- Good: "A few options for your patient data backups"
+- Bad: "Following up on our conversation"
+
+EMAIL BODY:
+- 150–220 words
+- Open with one or two sentences anchored in something specific they shared \
+(a worry, a situation, a deadline, a goal). Never use "I hope this email \
+finds you well", "It was great meeting you", or any hollow opener.
+- Middle: weave in their priorities and timeline naturally — don't restate \
+the meeting, move it forward.
+- Signals — use them:
+  * Objections (too expensive, locked in contract, happy with current IT): \
+address the concern indirectly and without defensiveness; don't ignore it
+  * Strong buying signals (asked for next steps, expressed urgency, \
+decision-maker in the room): match that energy with a clear, confident ask
+  * Concerns (cybersecurity, data loss, downtime): name the risk specifically, \
+then point toward the solution without overselling
+- Close with one or two concrete next steps matched to their timeline. \
+If they said ASAP, propose a specific time. If they're exploring, offer \
+a low-commitment first step.
+- Sign off with "Talk soon," or "Thanks," — never "Best regards", "Sincerely", \
+or "Warm regards".
+- Voice: warm, direct, human. No jargon — no "synergy", "leverage", \
+"circle back", "touch base", "reach out". No superlatives — no "excited", \
+"thrilled", "delighted". No em-dashes as decoration.
+- Use actual sender info; never leave placeholders like [your name]."""
 
 
 def build_user_prompt(notes: dict, sender: dict) -> str:
@@ -222,11 +248,19 @@ def draft_email():
 
     try:
         data = resp.json()
-        draft = data["choices"][0]["message"]["content"].strip()
+        content = data["choices"][0]["message"]["content"].strip()
     except (ValueError, KeyError, IndexError, TypeError) as e:
         return jsonify(error=f"Unexpected response shape from Ollama: {e}"), 502
 
-    return jsonify(draft=draft, model=ollama_model)
+    # Split subject line from body
+    subject = ""
+    body = content
+    first_line = content.split("\n", 1)[0]
+    if first_line.lower().startswith("subject:"):
+        subject = first_line[8:].strip()
+        body = content[len(first_line):].strip()
+
+    return jsonify(draft=body, subject=subject, model=ollama_model)
 
 
 if __name__ == "__main__":
