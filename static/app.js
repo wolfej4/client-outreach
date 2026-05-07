@@ -228,11 +228,13 @@ function openHistory() {
         <div class="history-item" data-id="${h.id}">
           <span class="history-company">${escapeHtml(h.notes.company || "(unnamed)")}</span>
           <span class="history-meta">${fmtDate(new Date(h.updated))}</span>
+          <button class="history-del" data-id="${h.id}" aria-label="Delete">✕</button>
         </div>
       `)
       .join("");
     list.querySelectorAll(".history-item").forEach((item) => {
-      item.addEventListener("click", () => {
+      item.addEventListener("click", (e) => {
+        if (e.target.closest(".history-del")) return;
         const h = history.find((x) => x.id === item.dataset.id);
         if (h) {
           setNotes(h.notes);
@@ -240,6 +242,15 @@ function openHistory() {
           closeModal("historyModal");
           window.scrollTo({ top: 0, behavior: "smooth" });
         }
+      });
+    });
+    list.querySelectorAll(".history-del").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const updated = loadHistory().filter((x) => x.id !== btn.dataset.id);
+        writeHistory(updated);
+        if (state.meeting_id === btn.dataset.id) state.meeting_id = null;
+        openHistory();
       });
     });
   }
