@@ -228,11 +228,13 @@ function openHistory() {
         <div class="history-item" data-id="${h.id}">
           <span class="history-company">${escapeHtml(h.notes.company || "(unnamed)")}</span>
           <span class="history-meta">${fmtDate(new Date(h.updated))}</span>
+          <button class="history-del" data-id="${h.id}" aria-label="Delete">✕</button>
         </div>
       `)
       .join("");
     list.querySelectorAll(".history-item").forEach((item) => {
-      item.addEventListener("click", () => {
+      item.addEventListener("click", (e) => {
+        if (e.target.closest(".history-del")) return;
         const h = history.find((x) => x.id === item.dataset.id);
         if (h) {
           setNotes(h.notes);
@@ -240,6 +242,15 @@ function openHistory() {
           closeModal("historyModal");
           window.scrollTo({ top: 0, behavior: "smooth" });
         }
+      });
+    });
+    list.querySelectorAll(".history-del").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const updated = loadHistory().filter((x) => x.id !== btn.dataset.id);
+        writeHistory(updated);
+        if (state.meeting_id === btn.dataset.id) state.meeting_id = null;
+        openHistory();
       });
     });
   }
@@ -395,43 +406,43 @@ const SOLUTIONS = [
   {
     id: "backup",    label: "Backup & Disaster Recovery",    short: "Backup & DR",
     desc: "Automated daily backups, tested recovery procedures, and offsite replication.",
-    keywords: ["backup", "data loss", "lost", "restore", "recovery", "ransomware", "files", "deleted", "wiped"],
-    signalLabels: ["Data loss worry"],
+    keywords: ["backup", "data loss", "lost", "restore", "recovery", "ransomware", "files", "deleted", "wiped", "no backup"],
+    signalLabels: ["Data loss worry", "No backups in place", "Recent security incident"],
     price: 8,
   },
   {
     id: "monitoring", label: "Proactive Monitoring & Alerting", short: "Monitoring",
     desc: "24/7 monitoring of endpoints, servers, and network with automated alerting.",
     keywords: ["downtime", "outage", "slow", "crash", "unreliable", "offline", "performance", "speed", "freezes"],
-    signalLabels: ["Downtime complaints"],
+    signalLabels: ["Downtime complaints", "Old / unsupported hardware"],
     price: 6,
   },
   {
     id: "security",  label: "Security & EDR",                 short: "Security & EDR",
     desc: "Endpoint detection and response, threat hunting, and security awareness training.",
-    keywords: ["security", "hack", "hacked", "ransomware", "phishing", "breach", "cyber", "virus", "malware", "attack"],
-    signalLabels: ["Cybersecurity concern"],
+    keywords: ["security", "hack", "hacked", "ransomware", "phishing", "breach", "cyber", "virus", "malware", "attack", "incident"],
+    signalLabels: ["Cybersecurity concern", "Recent security incident", "Staff using personal devices"],
     price: 10,
   },
   {
     id: "helpdesk",  label: "Managed Helpdesk",               short: "Helpdesk",
     desc: "Unlimited helpdesk support with SLA-backed response times for all users.",
     keywords: ["support", "helpdesk", "no one", "response", "ticket", "fix", "can't get help", "nobody"],
-    signalLabels: ["Complained about current provider"],
+    signalLabels: ["Complained about current provider", "Had a bad MSP experience"],
     price: 15,
   },
   {
     id: "compliance", label: "Compliance & Policy Management", short: "Compliance",
     desc: "HIPAA, PCI-DSS, and regulatory policy documentation and ongoing management.",
     keywords: ["compliance", "hipaa", "pci", "gdpr", "audit", "regulation", "policy", "regulated"],
-    signalLabels: ["Compliance pressure"],
+    signalLabels: ["Compliance pressure", "No IT documentation"],
     price: 5,
   },
   {
     id: "identity",  label: "Identity & Access Management",   short: "IAM",
     desc: "MFA enforcement, SSO, password management, and periodic access reviews.",
     keywords: ["password", "mfa", "access", "login", "account", "credential", "sharing password", "permissions"],
-    signalLabels: [],
+    signalLabels: ["Shared / weak passwords", "Staff using personal devices"],
     price: 4,
   },
   {
@@ -667,15 +678,28 @@ $("proposalPDF").addEventListener("click", () => {
 // ---- conversation signals -----------------------------------------------
 
 const QUICK_TAPS = [
-  { label: "Cybersecurity concern",    category: "concern"   },
-  { label: "Data loss worry",          category: "concern"   },
-  { label: "Downtime complaints",      category: "concern"   },
-  { label: "Compliance pressure",      category: "concern"   },
-  { label: "Asked about pricing",      category: "interest"  },
-  { label: "Mentioned growth plans",   category: "interest"  },
-  { label: "Expressed urgency",        category: "interest"  },
-  { label: "Asked for next steps",     category: "interest"  },
+  // Concerns — things that signal pain or risk
+  { label: "Cybersecurity concern",        category: "concern" },
+  { label: "Data loss worry",              category: "concern" },
+  { label: "Downtime complaints",          category: "concern" },
+  { label: "Compliance pressure",          category: "concern" },
+  { label: "Shared / weak passwords",      category: "concern" },
+  { label: "No backups in place",          category: "concern" },
+  { label: "Old / unsupported hardware",   category: "concern" },
+  { label: "Staff using personal devices", category: "concern" },
+  { label: "No IT documentation",          category: "concern" },
+  { label: "Recent security incident",     category: "concern" },
+  // Interest — positive buying signals
+  { label: "Asked about pricing",          category: "interest" },
+  { label: "Mentioned growth plans",       category: "interest" },
+  { label: "Expressed urgency",            category: "interest" },
+  { label: "Asked for next steps",         category: "interest" },
   { label: "Complained about current provider", category: "interest" },
+  { label: "Asked about onboarding",       category: "interest" },
+  { label: "Mentioned a deadline",         category: "interest" },
+  { label: "Asked for references",         category: "interest" },
+  { label: "Compared us to competitor",    category: "interest" },
+  { label: "Decision-maker in the room",   category: "interest" },
 ];
 
 const OBJECTIONS = [
@@ -685,6 +709,10 @@ const OBJECTIONS = [
   "Not the right time",
   "Need to involve others",
   "DIY / internal hire",
+  "No budget this quarter",
+  "Had a bad MSP experience",
+  "Owner not present today",
+  "Need board approval",
 ];
 
 function addSignal(label, category) {
