@@ -1141,6 +1141,18 @@ textarea {
 
 .modal-card--wide { max-width: 740px; }
 
+.modal--email { padding: 16px; }
+
+.modal-card--email {
+  max-width: 900px;
+  height: calc(100vh - 32px);
+  max-height: calc(100vh - 32px);
+}
+
+.modal-card--email .draft-text {
+  resize: none;
+}
+
 .insights-body {
   padding: 20px;
   overflow-y: auto;
