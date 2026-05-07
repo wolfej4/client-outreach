@@ -177,7 +177,11 @@
       <button id="modalClose" class="ghost icon" aria-label="Close">✕</button>
     </div>
     <div id="draftStatus" class="draft-status">Drafting…</div>
-    <textarea id="draftText" class="draft-text" rows="14" spellcheck="true" placeholder="The draft will appear here…"></textarea>
+    <div id="subjectRow" class="subject-row hidden">
+      <span class="subject-label">Subject</span>
+      <input id="subjectText" type="text" class="subject-input" spellcheck="true"/>
+    </div>
+    <textarea id="draftText" class="draft-text" spellcheck="true" placeholder="The draft will appear here…"></textarea>
     <div class="modal-actions">
       <button id="copyBtn" class="btn-secondary">Copy</button>
       <button id="mailBtn" class="btn-secondary">Open in mail</button>

@@ -718,8 +718,8 @@ textarea {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 640px;
-  max-height: 92vh;
+  max-width: 720px;
+  max-height: 96vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -756,10 +756,46 @@ textarea {
   font-family: var(--body-font);
 }
 
+.subject-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 20px 4px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.subject-row.hidden { display: none; }
+
+.subject-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.subject-input {
+  flex: 1;
+  font-size: 14px;
+  font-family: var(--body-font);
+  color: var(--text);
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+}
+
 .draft-text {
   margin: 0 20px 4px;
   flex: 1;
-  min-height: 220px;
+  min-height: 0;
   font-size: 15px;
   line-height: 1.6;
   font-family: var(--body-font);

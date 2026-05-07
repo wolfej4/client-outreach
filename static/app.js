@@ -292,6 +292,8 @@ async function draftEmail() {
   $("draftStatus").classList.remove("error");
   $("draftStatus").textContent = "Drafting via Ollama…";
   $("draftText").value = "";
+  $("subjectText").value = "";
+  $("subjectRow").classList.add("hidden");
   $("draftBtn").disabled = true;
   $("regenBtn").disabled = true;
 
@@ -318,8 +320,11 @@ async function draftEmail() {
     const data = await resp.json();
     if (resp.ok) {
       $("draftText").value = data.draft;
-      $("draftStatus").textContent =
-        `Draft from ${data.model}. Edit before sending.`;
+      if (data.subject) {
+        $("subjectText").value = data.subject;
+        $("subjectRow").classList.remove("hidden");
+      }
+      $("draftStatus").textContent = `Draft from ${data.model}. Edit before sending.`;
     } else {
       $("draftStatus").classList.add("error");
       $("draftStatus").textContent = data.error || "Draft failed";
@@ -390,7 +395,7 @@ $("copyBtn").addEventListener("click", async () => {
 $("mailBtn").addEventListener("click", () => {
   const notes = getNotes();
   const to = notes.contact_email || "";
-  const subject = `Following up — ${notes.company || ""}`;
+  const subject = $("subjectText").value || `Following up — ${notes.company || ""}`;
   const body = $("draftText").value;
   window.location.href =
     `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}` +
