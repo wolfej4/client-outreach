@@ -296,12 +296,52 @@ button {
   color: var(--muted);
 }
 
-.top-actions { display: flex; gap: 4px; }
+.top-actions { display: flex; gap: 4px; position: relative; }
+
+.overflow-btn { display: none; letter-spacing: 0.05em; }
+
+.overflow-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  z-index: 20;
+  min-width: 140px;
+  overflow: hidden;
+}
+
+.overflow-menu.hidden { display: none; }
+
+.overflow-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-family: var(--body-font);
+  font-weight: 400;
+  color: var(--text);
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.overflow-item:last-child { border-bottom: none; }
+.overflow-item:hover { background: var(--bg); }
+
+@media (max-width: 520px) {
+  .overflow-btn { display: flex; }
+}
 
 .page {
   max-width: 760px;
   margin: 0 auto;
-  padding: 22px 20px 40px;
+  padding: 22px 20px max(40px, calc(20px + env(safe-area-inset-bottom, 0px)));
 }
 
 .card {
@@ -351,10 +391,87 @@ button {
 }
 
 @media (max-width: 520px) {
+  /* topbar */
+  .topbar { padding: 10px 14px; gap: 8px; }
+  .brand-sub { display: none; }
+  .brand-mark { font-size: 19px; }
+  .ghost { padding: 7px 8px; font-size: 13px; }
+
+  /* hide less-used topbar buttons behind a tap on mobile;
+     keep Settings hidden — accessible from Insights/Recent flow */
+  #settingsBtn, #insightsBtn { display: none; }
+
+  /* page & cards */
+  .page { padding: 12px 12px 40px; }
+  .card { padding: 14px 14px; border-radius: var(--radius); }
+
+  /* tabs */
+  .tab-bar { padding: 0 14px; }
+  .tab-btn { padding: 10px 12px; font-size: 13px; }
+
+  /* form */
   .two-col { grid-template-columns: 1fr; }
-  .topbar { padding: 12px 18px; }
-  .page { padding: 16px 14px 40px; }
-  .card { padding: 16px 16px; }
+  .company-input { font-size: 22px; }
+  .head-row { gap: 8px; }
+  .meta { font-size: 12px; }
+
+  /* action bar — secondaries on first row, primary spans full width below */
+  .action-bar { flex-wrap: wrap; gap: 8px; }
+  .btn-primary { flex: 0 0 100%; order: 99; }
+  .btn-secondary { flex: 1; min-width: 0; font-size: 13px; padding: 11px 8px; }
+  .btn-primary { font-size: 15px; padding: 14px; }
+
+  /* signal taps — more tap-friendly */
+  .signal-tap { padding: 10px 14px; font-size: 14px; }
+  .signal-custom-row input { font-size: 16px; }
+
+  /* proposal — hide per-row totals, they're redundant with the grand total */
+  .proposal-service-line-total { display: none; }
+  .proposal-service-name { font-size: 13px; }
+
+  /* insights — already handled at 560px but reinforce */
+  .insights-body { padding: 14px; }
+  .insights-bar-track { width: 56px; }
+
+  /* settings two-col already collapses via .two-col rule above */
+
+  /* toast above home indicator */
+  .toast { bottom: max(24px, env(safe-area-inset-bottom, 24px)); }
+}
+
+/* modals as bottom sheets on mobile */
+@media (max-width: 600px) {
+  .modal {
+    align-items: flex-end;
+    padding: 0;
+    /* prevent body scroll bleed through */
+  }
+
+  .modal-card {
+    border-radius: 22px 22px 0 0;
+    border-bottom: none;
+    max-width: 100%;
+    max-height: 92vh;
+    /* slide up instead of fade */
+    animation: slideUp 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /* extra padding so content clears the iOS home bar */
+  .modal-actions {
+    padding-bottom: max(14px, env(safe-area-inset-bottom, 14px));
+  }
+
+  /* full-width draft textarea */
+  .draft-text { min-height: 160px; }
+
+  /* proposal controls scroll naturally inside the sheet */
+  .proposal-controls { max-height: 45vh; overflow-y: auto; }
+  .proposal-text { min-height: 120px; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
 }
 
 .lead-score {
